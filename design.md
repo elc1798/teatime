@@ -53,7 +53,7 @@ In the event of 'merge conflict', there are several strategies to resolve the
 issue:
 
     - User-interactive repair
-    - Priority-heirarchy: Peers are in an ordered heiarchy, and 'higher-tiered'
+    - Priority-hierarchy: Peers are in an ordered hierarchy, and 'higher-tiered'
       peers are deemed 'more correct'.
     - By relative timestamp (attempt to sync? This is heavily non-trivial).
 
