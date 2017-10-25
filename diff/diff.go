@@ -1,6 +1,8 @@
 package diff
 
-//https://stackoverflow.com/questions/1726336/how-do-i-use-a-generic-vector-in-go
+import "crypto/md5"
+import "io"
+import "bytes"
 
 type diff struct {
 }
@@ -25,8 +27,16 @@ func (f *file) NumLines() int {
     return len(f.lineSlice)
 }
 
+func fileHash(f file) []byte {
+    h := md5.New()
+    for i := 0; i < f.NumLines(); i++ {
+        io.WriteString(h, f.GetLine(i))
+    }
+    return h.Sum(nil)
+}
+
 func WasModified(basefile file, newfile file) bool {
-    return false
+    return !bytes.Equal(fileHash(basefile), fileHash(newfile))
 }
 
 func CreateDiff(basefile file, newfile file) diff {
