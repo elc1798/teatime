@@ -1,13 +1,30 @@
 package p2p
 
 import (
+    "log"
     "net"
 )
 
 type Peer struct {
     IP      string
     Port    int
-    ID      string
+}
+
+type TTNetSession struct {
+    CAConn      *net.TCPConn    // Connection to central authority
+    PeerConns   []*net.TCPConn  // List of peer connections
+    PeerList    []Peer
+}
+
+const CentralAuthorityHost = "tsukiumi.elc1798.tech:9001"
+
+func makeTCPConn(host string) (*net.TCPConn, error) {
+    tcpAddr, err := net.ResolveTCPAddr("tcp", host)
+    if err != nil {
+        return nil, err
+    }
+
+    return net.DialTCP("tcp", nil, tcpAddr)
 }
 
 /*
@@ -15,10 +32,43 @@ type Peer struct {
  * connection is made, reports to central authority that we are now part of the
  * peer network.
  *
+ * 'host' should be a string in the form "<server>:<port>" where <server> is an
+ * IPv4 address or a domain name, and port is a valid network port.
+ *
  * Returns the TCPConn object, if connection was made. nil if unsuccessful.
  */
-func TryTeaTimeConn(network string, laddr, raddr *net.TCPAddr) (*net.TCPConn, error) {
-    return nil, nil
+func (this *TTNetSession) TryTeaTimeConn(host string) (*net.TCPConn, error) {
+    peerConnection, err := makeTCPConn(host)
+    if err != nil {
+        return nil, err
+    }
+
+    // Connect to central authority
+    if this.CAConn == nil {
+        this.CAConn, err = makeTCPConn(CentralAuthorityHost)
+
+        // Errors to central authority on non-fatal
+        if err != nil {
+            log.Println(err)
+        }
+    }
+
+    if this.CAConn != nil {
+        _, err = this.CAConn.Write([]byte(host))
+        reply := make([]byte, 1024)
+        _, err = this.CAConn.Read(reply)
+
+        if string(reply) != "ok" {
+            log.Printf("Error from server reply: (err) %v, (resp) %v", err, reply)
+        }
+    }
+
+    // Add peer to internal tracking
+    this.PeerConns = append(this.PeerConns, peerConnection)
+    tcpAddr, _ := net.ResolveTCPAddr("tcp", host)
+    this.PeerList = append(this.PeerList, Peer{string(tcpAddr.IP), tcpAddr.Port})
+
+    return peerConnection, nil
 }
 
 /*
