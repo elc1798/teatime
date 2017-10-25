@@ -1,12 +1,12 @@
 package fs
 
 import (
+	"diff"
+	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
-    "math/rand"
-    "errors"
-    "diff"
 )
 
 const TEATIME_TRACKED_DIR = ".tracked/"
@@ -25,15 +25,15 @@ const TEATIME_DEFAULT_HOME = "/.teatime/"
 func AddTrackedFile(path string) error {
 	_, file := filepath.Split(path)
 	tempLinkName := getTempLinkName(file)
-    finalLinkPath := getTrackedFolderPath() + file
+	finalLinkPath := getTrackedFolderPath() + file
 
-    if !pathExists(getTrackedFolderPath()) {
-        return ErrorNotRepo()
-    }
+	if !pathExists(getTrackedFolderPath()) {
+		return ErrorNotRepo()
+	}
 
-    if pathExists(finalLinkPath) {
-        return ErrorAlreadyTrackingFile(file)
-    }
+	if pathExists(finalLinkPath) {
+		return ErrorAlreadyTrackingFile(file)
+	}
 
 	err := os.Link(path, tempLinkName)
 	if err != nil {
@@ -48,7 +48,7 @@ func AddTrackedFile(path string) error {
  * Reads in a file line by line from the given path, and returns a file object (essentially a vector of lines)
  */
 func GetFileObjFromFile(path string) (diff.File, error) {
-    return diff.File{}, nil
+	return diff.File{}, nil
 }
 
 /*
@@ -56,12 +56,12 @@ func GetFileObjFromFile(path string) (diff.File, error) {
  * variable is not set.
  */
 func getTTHome() string {
-    home := os.Getenv("TEATIME_HOME")
-    if home == "" {
-        return os.Getenv("HOME") + TEATIME_DEFAULT_HOME
-    } else {
-        return home
-    }
+	home := os.Getenv("TEATIME_HOME")
+	if home == "" {
+		return os.Getenv("HOME") + TEATIME_DEFAULT_HOME
+	} else {
+		return home
+	}
 }
 
 /*
@@ -79,14 +79,14 @@ func getTempLinkName(path string) string {
 }
 
 func ErrorNotRepo() error {
-    return errors.New("Working directory is not a TeaTime repo directory.")
+	return errors.New("Working directory is not a TeaTime repo directory.")
 }
 
 func ErrorAlreadyTrackingFile(filename string) error {
-    return errors.New("Already tracking a file with name: " + filename)
+	return errors.New("Already tracking a file with name: " + filename)
 }
 
 func pathExists(path string) bool {
-    _, stat_err := os.Stat(path)
-    return !os.IsNotExist(stat_err)
+	_, stat_err := os.Stat(path)
+	return !os.IsNotExist(stat_err)
 }
