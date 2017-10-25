@@ -18,6 +18,15 @@ type TTNetSession struct {
 
 const CentralAuthorityHost = "tsukiumi.elc1798.tech:9001"
 
+func NewTTNetSession() (*TTNetSession) {
+    newSession := new(TTNetSession)
+    newSession.CAConn = nil
+    newSession.PeerConns = make([]*net.TCPConn, 0)
+    newSession.PeerList = make([]Peer, 0)
+
+    return newSession
+}
+
 func makeTCPConn(host string) (*net.TCPConn, error) {
     tcpAddr, err := net.ResolveTCPAddr("tcp", host)
     if err != nil {
@@ -34,13 +43,11 @@ func makeTCPConn(host string) (*net.TCPConn, error) {
  *
  * 'host' should be a string in the form "<server>:<port>" where <server> is an
  * IPv4 address or a domain name, and port is a valid network port.
- *
- * Returns the TCPConn object, if connection was made. nil if unsuccessful.
  */
-func (this *TTNetSession) TryTeaTimeConn(host string) (*net.TCPConn, error) {
+func (this *TTNetSession) TryTeaTimeConn(host string) (error) {
     peerConnection, err := makeTCPConn(host)
     if err != nil {
-        return nil, err
+        return err
     }
 
     // Connect to central authority
@@ -50,6 +57,7 @@ func (this *TTNetSession) TryTeaTimeConn(host string) (*net.TCPConn, error) {
         // Errors to central authority on non-fatal
         if err != nil {
             log.Println(err)
+            this.CAConn = nil
         }
     }
 
@@ -66,9 +74,12 @@ func (this *TTNetSession) TryTeaTimeConn(host string) (*net.TCPConn, error) {
     // Add peer to internal tracking
     this.PeerConns = append(this.PeerConns, peerConnection)
     tcpAddr, _ := net.ResolveTCPAddr("tcp", host)
-    this.PeerList = append(this.PeerList, Peer{string(tcpAddr.IP), tcpAddr.Port})
+    this.PeerList = append(this.PeerList, Peer{
+        IP: string(tcpAddr.IP),
+        Port: tcpAddr.Port,
+    })
 
-    return peerConnection, nil
+    return nil
 }
 
 /*
