@@ -7,27 +7,27 @@ import "bytes"
 type diff struct {
 }
 
-type file struct {
+type File struct {
     lineSlice []string
 }
 
-func (f *file) GetLine(i int) string {
+func (f *File) GetLine(i int) string {
     return f.lineSlice[i]
 }
 
-func (f *file) SetLine(i int, s string) {
+func (f *File) SetLine(i int, s string) {
     f.lineSlice[i] = s
 }
 
-func (f *file) AppendLine(s string) {
+func (f *File) AppendLine(s string) {
     f.lineSlice = append(f.lineSlice, s)
 }
 
-func (f *file) NumLines() int {
+func (f *File) NumLines() int {
     return len(f.lineSlice)
 }
 
-func fileHash(f file) []byte {
+func fileHash(f File) []byte {
     h := md5.New()
     for i := 0; i < f.NumLines(); i++ {
         io.WriteString(h, f.GetLine(i))
@@ -35,20 +35,20 @@ func fileHash(f file) []byte {
     return h.Sum(nil)
 }
 
-func WasModified(basefile file, newfile file) bool {
+func WasModified(basefile File, newfile File) bool {
     return !bytes.Equal(fileHash(basefile), fileHash(newfile))
 }
 
-func CreateDiff(basefile file, newfile file) diff {
+func CreateDiff(basefile File, newfile File) diff {
     //http://www.xmailserver.org/diff2.pdf
     return diff{}
 }
 
-func DiffToSwapfile(d diff) file {
-    return file{}
+func DiffToSwapfile(d diff) File {
+    return File{}
 }
 
-func SwapfileToDiff(swapfile file) diff {
+func SwapfileToDiff(swapfile File) diff {
     return diff{}
 }
 
