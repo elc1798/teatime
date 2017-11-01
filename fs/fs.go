@@ -15,6 +15,31 @@ const TEATIME_TRACKED_DIR = ".tracked/"
 const TEATIME_DEFAULT_HOME = "/.teatime/"
 
 /*
+ * File object struct definition.  Used for diffs.
+ */
+type File struct {
+    lineSlice []string
+}
+
+func (f *File) GetLine(i int) string {
+    return f.lineSlice[i]
+}
+
+func (f *File) SetLine(i int, s string) {
+    f.lineSlice[i] = s
+}
+
+func (f *File) AppendLine(s string) {
+    f.lineSlice = append(f.lineSlice, s)
+}
+
+func (f *File) NumLines() int {
+    return len(f.lineSlice)
+}
+
+
+
+/*
  * Creates a hard link to the file at the given path, and places it in the tracked folder
  * for the working directory.  Does not work if not in top level repo directory, though files
  * not in the current directory can be linked.
@@ -47,8 +72,8 @@ func AddTrackedFile(path string) error {
 /*
  * Reads in a file line by line from the given path, and returns a file object (essentially a vector of lines)
  */
-func GetFileObjFromFile(path string) (diff.File, error) {
-	return diff.File{}, nil
+func GetFileObjFromFile(path string) (File, error) {
+	return File{}, nil
 }
 
 /*
