@@ -1,85 +1,85 @@
 package fs
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
 	"path/filepath"
-    "io"
-    "bufio"
 )
 
 const TEATIME_TRACKED_DIR = ".tracked/"
 const TEATIME_BACKUP_DIR = ".backup/"
 
-//Might want to use a home directory to track which directories to poll for changes?
-const TEATIME_DEFAULT_HOME = "/.teatime/"
+// Might want to use a home directory to track which directories to poll for changes?
+var TEATIME_DEFAULT_HOME = os.Getenv("HOME") + "/.teatime"
 
 /*
  * File object struct definition.  Used for diffs.
  */
 type File struct {
-    lineSlice []string
+	lineSlice []string
 }
 
 func (f *File) GetLine(i int) string {
-    return f.lineSlice[i]
+	return f.lineSlice[i]
 }
 
 func (f *File) SetLine(i int, s string) {
-    f.lineSlice[i] = s
+	f.lineSlice[i] = s
 }
 
 func (f *File) AppendLine(s string) {
-    f.lineSlice = append(f.lineSlice, s)
+	f.lineSlice = append(f.lineSlice, s)
 }
 
 func (f *File) NumLines() int {
-    return len(f.lineSlice)
+	return len(f.lineSlice)
 }
 
 /*
- * Reads in a file line by line from the given path, and returns a file object 
+ * Reads in a file line by line from the given path, and returns a file object
  * (essentially a vector of lines)
  */
 func GetFileObjFromFile(path string) (*File, error) {
-    file, err := os.Open(path)
-    if err != nil {
-        return nil, err
-    }
-    defer file.Close()
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
 
-    scanner := bufio.NewScanner(file)
-    fileObjPtr := new(File)
-    for scanner.Scan() {
-        fileObjPtr.AppendLine(scanner.Text())
-    }
+	scanner := bufio.NewScanner(file)
+	fileObjPtr := new(File)
+	for scanner.Scan() {
+		fileObjPtr.AppendLine(scanner.Text())
+	}
 
-    err = scanner.Err()
-    if err != nil {
-        return nil, err
-    }
+	err = scanner.Err()
+	if err != nil {
+		return nil, err
+	}
 
 	return fileObjPtr, nil
 }
 
 func WriteFileObjToPath(fileObj *File, path string) error {
-    file, err := os.Create(path)
-    if err != nil {
-        return err
-    }
-    defer file.Close()
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
 
-    writer := bufio.NewWriter(file)
-    for i := 0; i < fileObj.NumLines(); i++ {
-        _, err = writer.WriteString( fileObj.GetLine(i) + "\n")
-        if err != nil {
-            return err
-        }
-    }
-    writer.Flush()
-    return err
+	writer := bufio.NewWriter(file)
+	for i := 0; i < fileObj.NumLines(); i++ {
+		_, err = writer.WriteString(fileObj.GetLine(i) + "\n")
+		if err != nil {
+			return err
+		}
+	}
+	writer.Flush()
+	return err
 }
 
 /*
@@ -91,27 +91,26 @@ func WriteFileObjToPath(fileObj *File, path string) error {
  * name is already being tracked, or that the current directory is not a TeaTime repo.
  */
 func AddTrackedFile(path string) error {
-    _, file := filepath.Split(path)
-    tempLinkName := getTempLinkName(file)
-    finalLinkPath := getTrackedFolderPath() + file
+	_, file := filepath.Split(path)
+	tempLinkName := getTempLinkName(file)
+	finalLinkPath := getTrackedFolderPath() + file
 
-    if !pathExists(getTrackedFolderPath()) {
-        return ErrorNotRepo()
-    }
+	if !pathExists(getTrackedFolderPath()) {
+		return ErrorNotRepo()
+	}
 
-    if pathExists(finalLinkPath) {
-        return ErrorAlreadyTrackingFile(file)
-    }
+	if pathExists(finalLinkPath) {
+		return ErrorAlreadyTrackingFile(file)
+	}
 
-    err := os.Link(path, tempLinkName)
-    if err != nil {
-        return err
-    }
+	err := os.Link(path, tempLinkName)
+	if err != nil {
+		return err
+	}
 
-    err = os.Rename(tempLinkName, finalLinkPath)
-    return err
+	err = os.Rename(tempLinkName, finalLinkPath)
+	return err
 }
-
 
 /*
  * Overwrites the file in the "backup" directory for the given filename from the tracked
@@ -125,33 +124,33 @@ func WriteBackupFile(trackedFileName string) error {
 		return ErrorNotRepo()
 	}
 
-    if !pathExists(getTrackedFolderPath() + trackedFileName) {
-        return ErrorNotTrackingFile(trackedFileName)
-    }
+	if !pathExists(getTrackedFolderPath() + trackedFileName) {
+		return ErrorNotTrackingFile(trackedFileName)
+	}
 
-	err := CopyFile(getTrackedFolderPath() + trackedFileName, getBackupFolderPath() + trackedFileName)
-    return err
+	err := CopyFile(getTrackedFolderPath()+trackedFileName, getBackupFolderPath()+trackedFileName)
+	return err
 }
 
 func CopyFile(src, dst string) error {
-    in, err := os.Open(src)
-    if err != nil {
-        return err
-    }
-    defer in.Close()
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
 
-    out, err := os.Create(dst)
-    if err != nil {
-        return err
-    }
-    defer out.Close()
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
 
-    _, err = io.Copy(out, in)
-    if err != nil {
-        return err
-    }
+	_, err = io.Copy(out, in)
+	if err != nil {
+		return err
+	}
 
-    return out.Close()
+	return out.Close()
 }
 
 /*
@@ -161,7 +160,7 @@ func CopyFile(src, dst string) error {
 func getTTHome() string {
 	home := os.Getenv("TEATIME_HOME")
 	if home == "" {
-		return os.Getenv("HOME") + TEATIME_DEFAULT_HOME
+		return TEATIME_DEFAULT_HOME
 	} else {
 		return home
 	}

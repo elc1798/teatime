@@ -17,6 +17,7 @@ type TTNetSession struct {
 }
 
 const CentralAuthorityHost = "tsukiumi.elc1798.tech:9001"
+const PeerCacheFile = "~/.teatime/peer_cache"
 
 func NewTTNetSession() (*TTNetSession) {
     newSession := new(TTNetSession)
