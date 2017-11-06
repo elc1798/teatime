@@ -1,8 +1,14 @@
 package p2p
 
 import (
+	"errors"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
+	"strings"
+
+	tt "github.com/elc1798/teatime"
 )
 
 type Peer struct {
@@ -85,8 +91,44 @@ func (this *TTNetSession) TryTeaTimeConn(host string) error {
 /*
  * Gets a list of peers from local cache
  */
-func GetLocalPeerCache() []Peer {
-	return make([]Peer, 0)
+func GetLocalPeerCache() ([]Peer, error) {
+	peer_data, err := tt.ReadFile(tt.TEATIME_PEER_CACHE)
+	if err != nil {
+		return nil, err
+	}
+
+	peer_list := make([]Peer, 0)
+	for _, peer_str := range peer_data {
+		var s string
+		var i int
+
+		num, err := fmt.Sscanf(peer_str, "%s %d", &s, &i)
+		if num != 2 || err != nil {
+			return nil, errors.New("Invalid peer in peer_cache")
+		}
+
+		peer_list = append(peer_list, Peer{
+			IP:   s,
+			Port: i,
+		})
+	}
+
+	return peer_list, nil
+}
+
+func GenerateLocalPeerCache(peers []Peer) error {
+	// Generate string list from peers
+	string_list := make([]string, 0)
+	for _, peer := range peers {
+		string_list = append(string_list, fmt.Sprintf("%s %d", peer.IP, peer.Port))
+	}
+
+	// Write to file
+	return ioutil.WriteFile(
+		tt.TEATIME_PEER_CACHE,
+		[]byte(strings.Join(string_list, "\n")),
+		0644,
+	)
 }
 
 /*
