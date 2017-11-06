@@ -4,20 +4,21 @@ import (
 	"os"
 	"testing"
 
+	tt "github.com/elc1798/teatime"
 	fs "github.com/elc1798/teatime/fs"
 )
 
 const MY_FILE_NAME = "add_tracked_file_test.go"
 
 func TestAddTrackedFile(t *testing.T) {
-	os.RemoveAll(fs.TEATIME_DEFAULT_HOME)
-	os.RemoveAll(fs.TEATIME_TRACKED_DIR)
+	os.RemoveAll(tt.TEATIME_DEFAULT_HOME)
+	os.RemoveAll(tt.TEATIME_TRACKED_DIR)
 
-	if err := os.Mkdir(fs.TEATIME_DEFAULT_HOME, 0777); err != nil {
+	if err := os.Mkdir(tt.TEATIME_DEFAULT_HOME, 0777); err != nil {
 		t.Fatalf("Error creating teatime home: %v\n", err)
 	}
 
-	if err := os.Mkdir(fs.TEATIME_TRACKED_DIR, 0777); err != nil {
+	if err := os.Mkdir(tt.TEATIME_TRACKED_DIR, 0777); err != nil {
 		t.Fatalf("Error creating teatime tracked: %v\n", err)
 	}
 
@@ -25,7 +26,6 @@ func TestAddTrackedFile(t *testing.T) {
 		t.Fatalf("Failed to add tracked file: %v\n", err)
 	}
 
-	os.RemoveAll(fs.TEATIME_DEFAULT_HOME)
-	os.RemoveAll(fs.TEATIME_TRACKED_DIR)
-
+	os.RemoveAll(tt.TEATIME_DEFAULT_HOME)
+	os.RemoveAll(tt.TEATIME_TRACKED_DIR)
 }

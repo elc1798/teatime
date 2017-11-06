@@ -8,13 +8,9 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+
+	tt "github.com/elc1798/teatime"
 )
-
-const TEATIME_TRACKED_DIR = ".tracked/"
-const TEATIME_BACKUP_DIR = ".backup/"
-
-// Might want to use a home directory to track which directories to poll for changes?
-var TEATIME_DEFAULT_HOME = os.Getenv("HOME") + "/.teatime"
 
 /*
  * File object struct definition.  Used for diffs.
@@ -160,7 +156,7 @@ func CopyFile(src, dst string) error {
 func getTTHome() string {
 	home := os.Getenv("TEATIME_HOME")
 	if home == "" {
-		return TEATIME_DEFAULT_HOME
+		return tt.TEATIME_DEFAULT_HOME
 	} else {
 		return home
 	}
@@ -170,14 +166,14 @@ func getTTHome() string {
  * Returns a string for the full path for the tracked folder
  */
 func getTrackedFolderPath() string {
-	return TEATIME_TRACKED_DIR
+	return tt.TEATIME_TRACKED_DIR
 }
 
 /*
  * Returns a string for the full path for the tracked folder
  */
 func getBackupFolderPath() string {
-	return TEATIME_BACKUP_DIR
+	return tt.TEATIME_BACKUP_DIR
 }
 
 /*
