@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"os"
-    "strings"
+	"strings"
 )
 
 // Project constants
@@ -45,7 +45,6 @@ func ByteArrayStringEquals(a []byte, b string) bool {
 	return n <= len(b) && string(a[:n]) == b
 }
 
-
 // File object struct definition.  Used for diffs.
 type File struct {
 	lineSlice []string
@@ -68,11 +67,11 @@ func (f *File) NumLines() int {
 }
 
 func (f *File) ToString() string {
-    return strings.Join(f.lineSlice, "\n")
+	return strings.Join(f.lineSlice, "\n")
 }
 
-func (f* File) FromString(s string) {
-    f.lineSlice = strings.Split(s, "\n")
+func (f *File) FromString(s string) {
+	f.lineSlice = strings.Split(s, "\n")
 }
 
 /*
