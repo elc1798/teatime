@@ -40,8 +40,8 @@ func printErrOrSuccess(err error) {
 func printHelp() {
     fmt.Println("Commands")
     fmt.Println("--------")
-    fmt.Println("track\t\t\t[path_to_file]")
-    fmt.Println("back\t\t\t[tracked_filename]")
+    fmt.Println("track\t[path_to_file]")
+    fmt.Println("back\t[tracked_filename]")
     fmt.Println("--------")
 }
 

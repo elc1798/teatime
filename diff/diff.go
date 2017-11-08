@@ -3,6 +3,7 @@ package diff
 import "crypto/md5"
 import "io"
 import "bytes"
+import "fs"
 
 type diff struct {
 }
