@@ -38,44 +38,43 @@ func TestGetChangedFiles(t *testing.T) {
 	fileChanged.AppendLine("hello")
 	fileChanged.AppendLine("universe")
 
-    //Write original files
-    tt.WriteFileObjToPath(&fileOrig, tt.TEATIME_TRACKED_DIR + FILE1) 
-    tt.WriteFileObjToPath(&fileOrig, tt.TEATIME_TRACKED_DIR + FILE2) 
-    tt.WriteFileObjToPath(&fileOrig, tt.TEATIME_TRACKED_DIR + FILE3) 
+	//Write original files
+	tt.WriteFileObjToPath(&fileOrig, tt.TEATIME_TRACKED_DIR+FILE1)
+	tt.WriteFileObjToPath(&fileOrig, tt.TEATIME_TRACKED_DIR+FILE2)
+	tt.WriteFileObjToPath(&fileOrig, tt.TEATIME_TRACKED_DIR+FILE3)
 
-    //Write backup files to diff with
-    fs.WriteBackupFile(FILE1)
-    fs.WriteBackupFile(FILE2)
-    fs.WriteBackupFile(FILE3)
-    fs.WriteBackupFile(GET_CHANGED_FILES_TEST_GO)
+	//Write backup files to diff with
+	fs.WriteBackupFile(FILE1)
+	fs.WriteBackupFile(FILE2)
+	fs.WriteBackupFile(FILE3)
+	fs.WriteBackupFile(GET_CHANGED_FILES_TEST_GO)
 
-    //Overwrite some of the tracked files
-    tt.WriteFileObjToPath(&fileChanged, tt.TEATIME_TRACKED_DIR + FILE1) 
-    tt.WriteFileObjToPath(&fileOrig, tt.TEATIME_TRACKED_DIR + FILE2) 
-    tt.WriteFileObjToPath(&fileChanged, tt.TEATIME_TRACKED_DIR + FILE3) 
+	//Overwrite some of the tracked files
+	tt.WriteFileObjToPath(&fileChanged, tt.TEATIME_TRACKED_DIR+FILE1)
+	tt.WriteFileObjToPath(&fileOrig, tt.TEATIME_TRACKED_DIR+FILE2)
+	tt.WriteFileObjToPath(&fileChanged, tt.TEATIME_TRACKED_DIR+FILE3)
 
-
-    changelist, err := fs.GetChangedFiles(".")
+	changelist, err := fs.GetChangedFiles(".")
 
 	if err != nil {
 		t.Fatalf("Failed to get changed files: %v\n", err)
 	}
 
-    if len(changelist) != 2 {
+	if len(changelist) != 2 {
 		t.Fatalf("Expected 2 changed files.  Actual: %v\n", len(changelist))
-    }
+	}
 
-    if changelist[0] != changelist[1] {
-        if changelist[0] != FILE1 && changelist[0] != FILE3 {
-            t.Fatalf("Received unexpected changed file: %v\n", changelist[0])
-        } 
-        if changelist[1] != FILE1 && changelist[1] != FILE3 {
-            t.Fatalf("Received unexpected changed file: %v\n", changelist[1])
-        } 
- 
-    } else {
-        t.Fatalf("Received repeats in changed file list\n")
-    }
+	if changelist[0] != changelist[1] {
+		if changelist[0] != FILE1 && changelist[0] != FILE3 {
+			t.Fatalf("Received unexpected changed file: %v\n", changelist[0])
+		}
+		if changelist[1] != FILE1 && changelist[1] != FILE3 {
+			t.Fatalf("Received unexpected changed file: %v\n", changelist[1])
+		}
+
+	} else {
+		t.Fatalf("Received repeats in changed file list\n")
+	}
 
 	os.RemoveAll(tt.TEATIME_DEFAULT_HOME)
 	os.RemoveAll(tt.TEATIME_TRACKED_DIR)

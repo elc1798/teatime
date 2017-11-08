@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"crypto/md5"
 	//"fmt"
-	dmp "github.com/sergi/go-diff/diffmatchpatch"
 	tt "github.com/elc1798/teatime"
+	dmp "github.com/sergi/go-diff/diffmatchpatch"
 	"io"
 )
 
@@ -30,9 +30,9 @@ func CreateDiff(basefile tt.File, newfile tt.File) []dmp.Diff {
 }
 
 func SwapfileToDiff(swapfile tt.File) []dmp.Diff {
-    //d := []dmp.diff
-    var d []dmp.Diff
-    return d
+	//d := []dmp.diff
+	var d []dmp.Diff
+	return d
 }
 
 func DiffToSwapfile(d dmp.Diff) tt.File {
