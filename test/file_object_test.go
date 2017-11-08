@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	fs "github.com/elc1798/teatime/fs"
+	tt "github.com/elc1798/teatime"
 )
 
 const TEST_FILE_NAME = "file_object_test.tmp"
@@ -48,12 +48,12 @@ func readFile(path string) ([]string, error) {
 func TestFileObjectWriting(t *testing.T) {
 	generatedString := setUpTestFile()
 
-	fileObj, err := fs.GetFileObjFromFile(TEST_FILE_NAME)
+	fileObj, err := tt.GetFileObjFromFile(TEST_FILE_NAME)
 	if err != nil {
 		t.Fatalf("Error in GetFileObjFromFile: %v\n", err)
 	}
 
-	err = fs.WriteFileObjToPath(fileObj, TEST_FILE_NAME+".out")
+	err = tt.WriteFileObjToPath(fileObj, TEST_FILE_NAME+".out")
 	if err != nil {
 		t.Fatalf("Error in WriteFileObjToPath: %v\n", err)
 	}

@@ -3,20 +3,20 @@ package test
 import (
 	"testing"
 
+    tt   "github.com/elc1798/teatime"
 	diff "github.com/elc1798/teatime/diff"
-	fs "github.com/elc1798/teatime/fs"
 )
 
 func TestWasModified(t *testing.T) {
-	file1 := fs.File{}
+	file1 := tt.File{}
 	file1.AppendLine("hello")
 	file1.AppendLine("world")
 
-	file2 := fs.File{}
+	file2 := tt.File{}
 	file2.AppendLine("hello")
 	file2.AppendLine("world")
 
-	file3 := fs.File{}
+	file3 := tt.File{}
 	file3.AppendLine("goodbye")
 	file3.AppendLine("world")
 
