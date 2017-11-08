@@ -5,13 +5,13 @@ import (
 	"crypto/md5"
 	"io"
 
-	fs "github.com/elc1798/teatime/fs"
+	tt "github.com/elc1798/teatime/"
 )
 
 type diff struct {
 }
 
-func fileHash(f fs.File) []byte {
+func fileHash(f tt.File) []byte {
 	h := md5.New()
 	for i := 0; i < f.NumLines(); i++ {
 		io.WriteString(h, f.GetLine(i))
@@ -19,20 +19,20 @@ func fileHash(f fs.File) []byte {
 	return h.Sum(nil)
 }
 
-func WasModified(basefile fs.File, newfile fs.File) bool {
+func WasModified(basefile tt.File, newfile tt.File) bool {
 	return !bytes.Equal(fileHash(basefile), fileHash(newfile))
 }
 
-func CreateDiff(basefile fs.File, newfile fs.File) diff {
+func CreateDiff(basefile tt.File, newfile tt.File) diff {
 	//http://www.xmailserver.org/diff2.pdf
 	return diff{}
 }
 
-func DiffToSwapfile(d diff) fs.File {
-	return fs.File{}
+func DiffToSwapfile(d diff) tt.File {
+	return tt.File{}
 }
 
-func SwapfileToDiff(swapfile fs.File) diff {
+func SwapfileToDiff(swapfile tt.File) diff {
 	return diff{}
 }
 
