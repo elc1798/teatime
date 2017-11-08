@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"crypto/md5"
 	//"fmt"
-	fs "github.com/elc1798/teatime/fs"
 	dmp "github.com/sergi/go-diff/diffmatchpatch"
+	tt "github.com/elc1798/teatime"
 	"io"
 )
 
-func fileHash(f fs.File) []byte {
+func fileHash(f tt.File) []byte {
 	h := md5.New()
 	for i := 0; i < f.NumLines(); i++ {
 		io.WriteString(h, f.GetLine(i))
@@ -17,11 +17,11 @@ func fileHash(f fs.File) []byte {
 	return h.Sum(nil)
 }
 
-func WasModified(basefile fs.File, newfile fs.File) bool {
+func WasModified(basefile tt.File, newfile tt.File) bool {
 	return !bytes.Equal(fileHash(basefile), fileHash(newfile))
 }
 
-func CreateDiff(basefile fs.File, newfile fs.File) []dmp.Diff {
+func CreateDiff(basefile tt.File, newfile tt.File) []dmp.Diff {
 	//http://www.xmailserver.org/diff2.pdf
 	d := dmp.New()
 	diffs := d.DiffMain(basefile.ToString(), newfile.ToString(), false)
@@ -29,14 +29,14 @@ func CreateDiff(basefile fs.File, newfile fs.File) []dmp.Diff {
 	return diffs
 }
 
-func DiffToSwapfile(d []dmp.Diff) fs.File {
-	return fs.File{}
-}
-
-func SwapfileToDiff(swapfile fs.File) []dmp.Diff {
+func SwapfileToDiff(swapfile tt.File) []dmp.Diff {
     //d := []dmp.diff
     var d []dmp.Diff
     return d
+}
+
+func DiffToSwapfile(d dmp.Diff) tt.File {
+	return tt.File{}
 }
 
 //Not sure what to do here...
