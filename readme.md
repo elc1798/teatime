@@ -1,6 +1,6 @@
 # Tea-Time
 
-Travis CI: [![Build
+[![Build
 Status](https://travis-ci.org/elc1798/teatime.svg?branch=master)](https://travis-ci.org/elc1798/teatime)
 
 Tea-time is a file syncing application that allows for a directory and it's
