@@ -1,39 +1,85 @@
 package p2p
 
 import (
-    "log"
-    "net"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net"
+	"strconv"
+	"strings"
+	"time"
+
+	tt "github.com/elc1798/teatime"
 )
 
 type Peer struct {
-    IP      string
-    Port    int
+	IP   string
+	Port int
 }
 
 type TTNetSession struct {
-    CAConn      *net.TCPConn    // Connection to central authority
-    PeerConns   []*net.TCPConn  // List of peer connections
-    PeerList    []Peer
+	CAConn    *net.TCPConn            // Connection to central authority
+	PeerConns map[string]*net.TCPConn // List of peer connections
+	PeerList  map[string]Peer
+	Listener  *net.TCPListener
+
+	// Counters
+	NumPingsSent int
+	NumPingsRcvd int
+	NumPongsSent int
+	NumPongsRcvd int
 }
 
 const CentralAuthorityHost = "tsukiumi.elc1798.tech:9001"
 
-func NewTTNetSession() (*TTNetSession) {
-    newSession := new(TTNetSession)
-    newSession.CAConn = nil
-    newSession.PeerConns = make([]*net.TCPConn, 0)
-    newSession.PeerList = make([]Peer, 0)
+/*
+ * Creates and initializes a new Teatime Network Session
+ */
+func NewTTNetSession() *TTNetSession {
+	newSession := new(TTNetSession)
+	newSession.CAConn = nil
+	newSession.PeerConns = make(map[string]*net.TCPConn)
+	newSession.PeerList = make(map[string]Peer)
+	newSession.Listener = nil
 
-    return newSession
+	newSession.NumPingsSent = 0
+	newSession.NumPingsRcvd = 0
+	newSession.NumPongsSent = 0
+	newSession.NumPingsRcvd = 0
+
+	return newSession
 }
 
+/*
+ * Generates a TCP connection
+ */
 func makeTCPConn(host string) (*net.TCPConn, error) {
-    tcpAddr, err := net.ResolveTCPAddr("tcp", host)
-    if err != nil {
-        return nil, err
-    }
+	tcpAddr, err := net.ResolveTCPAddr("tcp", host)
+	if err != nil {
+		return nil, err
+	}
 
-    return net.DialTCP("tcp", nil, tcpAddr)
+	return net.DialTCP("tcp", nil, tcpAddr)
+}
+
+/*
+ * Equivalent of `doTeatimeServerHandshake`, but from client's perspective
+ */
+func doTeatimeClientHandshake(conn *net.TCPConn) error {
+	if _, err := SendData(conn, []byte(tt.TEATIME_NET_SYN)); err != nil {
+		return fmt.Errorf("Error sending syn [%v]", err)
+	}
+
+	conn.SetReadDeadline(time.Now().Add(time.Second * 2))
+	if serv_ack, _, err := ReadData(conn); err != nil || !tt.ByteArrayStringEquals(serv_ack, tt.TEATIME_NET_ACK) {
+		return fmt.Errorf("Invalid teatime_ack [%v]", err)
+	}
+
+	if _, err := SendData(conn, []byte(tt.TEATIME_NET_SYNACK)); err != nil {
+		return fmt.Errorf("Error sending synack [%v]", err)
+	}
+
+	return nil
 }
 
 /*
@@ -44,55 +90,106 @@ func makeTCPConn(host string) (*net.TCPConn, error) {
  * 'host' should be a string in the form "<server>:<port>" where <server> is an
  * IPv4 address or a domain name, and port is a valid network port.
  */
-func (this *TTNetSession) TryTeaTimeConn(host string) (error) {
-    peerConnection, err := makeTCPConn(host)
-    if err != nil {
-        return err
-    }
+func (this *TTNetSession) TryTeaTimeConn(host string, pingInterval time.Duration) error {
+	if this.PeerConns[host] != nil {
+		return fmt.Errorf("Peer '%v' already exists", host)
+	}
 
-    // Connect to central authority
-    if this.CAConn == nil {
-        this.CAConn, err = makeTCPConn(CentralAuthorityHost)
+	peerConnection, err := makeTCPConn(host)
+	if err != nil {
+		return err
+	}
 
-        // Errors to central authority on non-fatal
-        if err != nil {
-            log.Println(err)
-            this.CAConn = nil
-        }
-    }
+	// Verify
+	if e1 := doTeatimeClientHandshake(peerConnection); e1 != nil {
+		peerConnection.Close()
+		return e1
+	}
 
-    if this.CAConn != nil {
-        _, err = this.CAConn.Write([]byte(host))
-        reply := make([]byte, 1024)
-        _, err = this.CAConn.Read(reply)
+	// Add peer to internal tracking
+	tcpAddr, _ := net.ResolveTCPAddr("tcp", host)
+	key := fmt.Sprintf("%v:%v", tcpAddr.IP, tcpAddr.Port)
 
-        if string(reply) != "ok" {
-            log.Printf("Error from server reply: (err) %v, (resp) %v", err, reply)
-        }
-    }
+	this.PeerConns[key] = peerConnection
+	this.PeerList[key] = Peer{
+		IP:   fmt.Sprintf("%v", tcpAddr.IP),
+		Port: tcpAddr.Port,
+	}
 
-    // Add peer to internal tracking
-    this.PeerConns = append(this.PeerConns, peerConnection)
-    tcpAddr, _ := net.ResolveTCPAddr("tcp", host)
-    this.PeerList = append(this.PeerList, Peer{
-        IP: string(tcpAddr.IP),
-        Port: tcpAddr.Port,
-    })
+	newPeer := this.PeerList[key]
+	log.Printf("TryTeaTimeConn: %v:%v", newPeer.IP, newPeer.Port)
 
-    return nil
+	// Connect to central authority {{{
+	if this.CAConn == nil {
+		this.CAConn, err = makeTCPConn(CentralAuthorityHost)
+
+		// Errors to central authority are non-fatal
+		if err != nil {
+			log.Println(err)
+			this.CAConn = nil
+		}
+	}
+
+	if this.CAConn != nil {
+		// TODO: Auth, then grab peer list from CA
+	}
+	// }}}
+
+	// Start ping service
+	go this.startPingService(key, pingInterval)
+
+	return nil
 }
 
 /*
  * Gets a list of peers from local cache
  */
-func GetLocalPeerCache() ([]Peer) {
-    return make([]Peer, 0)
+func GetLocalPeerCache() (map[string]Peer, error) {
+	peer_data, err := tt.ReadFile(tt.TEATIME_PEER_CACHE)
+	if err != nil {
+		return nil, err
+	}
+
+	peer_list := make(map[string]Peer)
+	for _, peer_str := range peer_data {
+		trimmed := strings.TrimSpace(peer_str)
+		tokens := strings.Split(trimmed, ":")
+
+		if len(tokens) != 2 {
+			return nil, fmt.Errorf("Invalid peer: '%v'", trimmed)
+		}
+
+		port, err := strconv.Atoi(tokens[1])
+		if err != nil {
+			return nil, fmt.Errorf("Invalid peer: '%v'", trimmed)
+		}
+		peer_list[trimmed] = Peer{
+			IP:   tokens[0],
+			Port: port,
+		}
+	}
+
+	return peer_list, nil
+}
+
+func GenerateLocalPeerCache(peers map[string]Peer) error {
+	// Generate string list from peers
+	string_list := make([]string, 0)
+	for _, peer := range peers {
+		string_list = append(string_list, fmt.Sprintf("%s:%d", peer.IP, peer.Port))
+	}
+
+	// Write to file
+	return ioutil.WriteFile(
+		tt.TEATIME_PEER_CACHE,
+		[]byte(strings.Join(string_list, "\n")),
+		0644,
+	)
 }
 
 /*
  * Gets a list of peers from central authority
  */
 func GetPeerListFromCentral() ([]Peer, error) {
-    return make([]Peer, 0), nil
+	return make([]Peer, 0), nil
 }
-
