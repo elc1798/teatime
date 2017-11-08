@@ -8,7 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-
+    "strings"
 	tt "github.com/elc1798/teatime"
 )
 
@@ -35,6 +35,13 @@ func (f *File) NumLines() int {
 	return len(f.lineSlice)
 }
 
+func (f *File) ToString() string {
+    return strings.Join(f.lineSlice, "\n")
+}
+
+func (f* File) FromString(s string) {
+    f.lineSlice = strings.Split(s, "\n")
+}
 /*
  * Reads in a file line by line from the given path, and returns a file object
  * (essentially a vector of lines)

@@ -3,14 +3,11 @@ package diff
 import (
 	"bytes"
 	"crypto/md5"
-	"io"
-    "fmt"
-    "github.com/sergi/go-diff/diffmatchpatch"
+	//"fmt"
 	fs "github.com/elc1798/teatime/fs"
+	dmp "github.com/sergi/go-diff/diffmatchpatch"
+	"io"
 )
-
-type diff struct {
-}
 
 func fileHash(f fs.File) []byte {
 	h := md5.New()
@@ -24,25 +21,24 @@ func WasModified(basefile fs.File, newfile fs.File) bool {
 	return !bytes.Equal(fileHash(basefile), fileHash(newfile))
 }
 
-func CreateDiff(basefile file, newfile file) diff {
-    //http://www.xmailserver.org/diff2.pdf
-    text1 := "Lorem ipsum dolor."
-    text2 := "Lorem dolor sit amet."
-    dmp := diffmatchpatch.New()
-    diffs := dmp.DiffMain(text1, text2, false);
-    fmt.Println(dmp.DiffPrettyText(diffs));
-
-    return diff{}
+func CreateDiff(basefile fs.File, newfile fs.File) []dmp.Diff {
+	//http://www.xmailserver.org/diff2.pdf
+	d := dmp.New()
+	diffs := d.DiffMain(basefile.ToString(), newfile.ToString(), false)
+	//fmt.Println(dmp.DiffPrettyText(diffs))
+	return diffs
 }
 
-func DiffToSwapfile(d diff) fs.File {
+func DiffToSwapfile(d []dmp.Diff) fs.File {
 	return fs.File{}
 }
 
-func SwapfileToDiff(swapfile fs.File) diff {
-	return diff{}
+func SwapfileToDiff(swapfile fs.File) []dmp.Diff {
+    //d := []dmp.diff
+    var d []dmp.Diff
+    return d
 }
 
 //Not sure what to do here...
-func HandleMergeConflicts(d diff) {
+func HandleMergeConflicts(d []dmp.Diff) {
 }
