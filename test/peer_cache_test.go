@@ -14,12 +14,12 @@ func TestPeerCache(t *testing.T) {
 		t.Fatalf("Error creating teatime home: %v\n", err)
 	}
 
-	testPeerList := []p2p.Peer{
-		p2p.Peer{IP: "1.2.3.4", Port: 80},
-		p2p.Peer{IP: "8.8.8.8", Port: 443},
-		p2p.Peer{IP: "172.217.9.46", Port: 12345},
-		p2p.Peer{IP: "192.168.1.1", Port: 9001},
-		p2p.Peer{IP: "192.17.13.36", Port: 1111},
+	testPeerList := map[string]p2p.Peer{
+		"1.2.3.4:80":         p2p.Peer{IP: "1.2.3.4", Port: 80},
+		"8.8.8.8:443":        p2p.Peer{IP: "8.8.8.8", Port: 443},
+		"172.217.9.46:12345": p2p.Peer{IP: "172.217.9.46", Port: 12345},
+		"192.168.1.1:9001":   p2p.Peer{IP: "192.168.1.1", Port: 9001},
+		"192.17.13.36:1111":  p2p.Peer{IP: "192.17.13.36", Port: 1111},
 	}
 
 	if err := p2p.GenerateLocalPeerCache(testPeerList); err != nil {
