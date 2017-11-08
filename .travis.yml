@@ -1,0 +1,13 @@
+language: go
+
+go:
+  - 1.8.x
+
+env:
+  - "GOROOT=/home/travis/go"
+
+before_install:
+  - go get github.com/elc1798/teatime
+
+script:
+  - go test -v ./...
