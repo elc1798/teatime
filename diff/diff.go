@@ -4,7 +4,8 @@ import (
 	"bytes"
 	"crypto/md5"
 	"io"
-
+    "fmt"
+    "github.com/sergi/go-diff/diffmatchpatch"
 	fs "github.com/elc1798/teatime/fs"
 )
 
@@ -23,9 +24,15 @@ func WasModified(basefile fs.File, newfile fs.File) bool {
 	return !bytes.Equal(fileHash(basefile), fileHash(newfile))
 }
 
-func CreateDiff(basefile fs.File, newfile fs.File) diff {
-	//http://www.xmailserver.org/diff2.pdf
-	return diff{}
+func CreateDiff(basefile file, newfile file) diff {
+    //http://www.xmailserver.org/diff2.pdf
+    text1 := "Lorem ipsum dolor."
+    text2 := "Lorem dolor sit amet."
+    dmp := diffmatchpatch.New()
+    diffs := dmp.DiffMain(text1, text2, false);
+    fmt.Println(dmp.DiffPrettyText(diffs));
+
+    return diff{}
 }
 
 func DiffToSwapfile(d diff) fs.File {
