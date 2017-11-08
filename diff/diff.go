@@ -5,7 +5,7 @@ import (
 	"crypto/md5"
 	"io"
 
-	tt "github.com/elc1798/teatime/"
+	tt "github.com/elc1798/teatime"
 )
 
 type diff struct {
