@@ -1,14 +1,13 @@
 package fs
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io"
 	"math/rand"
 	"os"
 	"path/filepath"
-
+    ioutil "io/ioutil"
     diff "github.com/elc1798/teatime/diff"
 	tt "github.com/elc1798/teatime"
 )
@@ -76,10 +75,10 @@ func GetChangedFiles(pathToRepo string) ([]string, error) {
     }
 
     //Send out task to check for difference in each file in tracked directory
-    files, err := io.ReadDir(tt.TEATIME_TRACKED_DIR)
+    files, err := ioutil.ReadDir(tt.TEATIME_TRACKED_DIR)
     var numTracked int = len(files)
-    var diffChannels [numTracked]chan bool 
-    var errChannels [numTracked]chan error
+    diffChannels := make([]chan bool, numTracked)    
+    errChannels := make([]chan error, numTracked)
     for i := 0; i < numTracked; i++ {
         diffChannels[i] = make(chan bool)
         errChannels[i] = make(chan error)
@@ -127,7 +126,7 @@ func FileWasChanged(result chan bool, errChan chan error, fileName string) {
         errChan <- err
     }
 
-    result <- diff.WasModified(fileBackup, fileTracked)
+    result <- diff.WasModified(*fileBackup, *fileTracked)
     errChan <- err
 }
 
