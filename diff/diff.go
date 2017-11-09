@@ -21,24 +21,24 @@ func WasModified(basefile tt.File, newfile tt.File) bool {
 	return !bytes.Equal(fileHash(basefile), fileHash(newfile))
 }
 
-func CreateDiff(basefile tt.File, newfile tt.File) []dmp.Diff {
+func CreateDiffFromFiles(basefile tt.File, newfile tt.File) string {
 	//http://www.xmailserver.org/diff2.pdf
+	//https://godoc.org/github.com/sergi/go-diff/diffmatchpatch
 	d := dmp.New()
 	diffs := d.DiffMain(basefile.ToString(), newfile.ToString(), false)
-	//fmt.Println(dmp.DiffPrettyText(diffs))
-	return diffs
+	return d.DiffToDelta(diffs)
 }
 
-func SwapfileToDiff(swapfile tt.File) []dmp.Diff {
-	//d := []dmp.diff
-	var d []dmp.Diff
-	return d
-}
-
-func DiffToSwapfile(d dmp.Diff) tt.File {
-	return tt.File{}
+func ApplyDiffToFiles(basefile tt.File, delta string) tt.File {
+	d := dmp.New()
+	diffs, _ := d.DiffFromDelta(basefile.ToString(), delta)
+	newfileString := d.DiffText2(diffs)
+	newfile := tt.File{}
+	newfile.FromString(newfileString)
+	return newfile
 }
 
 //Not sure what to do here...
-func HandleMergeConflicts(d []dmp.Diff) {
+func HandleMergeConflicts(basefile tt.File, d1 []dmp.Diff, d2 []dmp.Diff) tt.File {
+	return tt.File{}
 }
