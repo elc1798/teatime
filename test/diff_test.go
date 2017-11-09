@@ -3,9 +3,9 @@ package test
 import (
 	"testing"
 	//	fs "github.com/elc1798/teatime/fs"
+	"fmt"
 	tt "github.com/elc1798/teatime"
 	diff "github.com/elc1798/teatime/diff"
-	dmp "github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,11 +34,9 @@ func TestWasModified(t *testing.T) {
 func TestDiff(t *testing.T) {
 	file1 := tt.File{}
 	file2 := tt.File{}
-	//file1.AppendLine("Lorem ipsum dolor.")
-	//file2.AppendLine("Lorem dolor sit amet.")
-	file1.AppendLine("Lorem ipsum")
-	file2.AppendLine("Lorem dolor")
-	diffs1 := []dmp.Diff{dmp.Diff{Type: 0, Text: "Lorem "}, dmp.Diff{Type: -1, Text: "ipsum"}, dmp.Diff{Type: 1, Text: "dolor"}}
-
-	assert.Equal(t, diff.CreateDiff(file1, file2), diffs1, "Diff was incorrect")
+	file1.AppendLine("Lorem ipsum dolor.")
+	file2.AppendLine("Lorem dolor sit amet.")
+	d := diff.CreateDiff(file1, file2)
+	fmt.Println(d)
+	assert.Equal(t, file2, diff.ApplyDiff(file1, d), "Diff was incorrect")
 }

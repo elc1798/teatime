@@ -21,7 +21,7 @@ func WasModified(basefile tt.File, newfile tt.File) bool {
 	return !bytes.Equal(fileHash(basefile), fileHash(newfile))
 }
 
-func CreateDiffFromFiles(basefile tt.File, newfile tt.File) string {
+func CreateDiff(basefile tt.File, newfile tt.File) string {
 	//http://www.xmailserver.org/diff2.pdf
 	//https://godoc.org/github.com/sergi/go-diff/diffmatchpatch
 	d := dmp.New()
@@ -29,7 +29,7 @@ func CreateDiffFromFiles(basefile tt.File, newfile tt.File) string {
 	return d.DiffToDelta(diffs)
 }
 
-func ApplyDiffToFiles(basefile tt.File, delta string) tt.File {
+func ApplyDiff(basefile tt.File, delta string) tt.File {
 	d := dmp.New()
 	diffs, _ := d.DiffFromDelta(basefile.ToString(), delta)
 	newfileString := d.DiffText2(diffs)
