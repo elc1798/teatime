@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -22,6 +23,8 @@ type TTNetSession struct {
 	PeerConns map[string]*net.TCPConn // List of peer connections
 	PeerList  map[string]Peer
 	Listener  *net.TCPListener
+	RepoPath  string
+	PeerCache string
 
 	// Counters
 	NumPingsSent int
@@ -35,12 +38,14 @@ const CentralAuthorityHost = "tsukiumi.elc1798.tech:9001"
 /*
  * Creates and initializes a new Teatime Network Session
  */
-func NewTTNetSession() *TTNetSession {
+func NewTTNetSession(repoName string) *TTNetSession {
 	newSession := new(TTNetSession)
 	newSession.CAConn = nil
 	newSession.PeerConns = make(map[string]*net.TCPConn)
 	newSession.PeerList = make(map[string]Peer)
 	newSession.Listener = nil
+	newSession.RepoPath = tt.TEATIME_DEFAULT_HOME + repoName
+	newSession.PeerCache = tt.TEATIME_DEFAULT_HOME + repoName + tt.TEATIME_PEER_CACHE
 
 	newSession.NumPingsSent = 0
 	newSession.NumPingsRcvd = 0
@@ -138,14 +143,17 @@ func (this *TTNetSession) TryTeaTimeConn(host string, pingInterval time.Duration
 	// Start ping service
 	go this.startPingService(key, pingInterval)
 
+	// Start file difference service
+	go this.startChangeNotifier(key)
+
 	return nil
 }
 
 /*
  * Gets a list of peers from local cache
  */
-func GetLocalPeerCache() (map[string]Peer, error) {
-	peer_data, err := tt.ReadFile(tt.TEATIME_PEER_CACHE)
+func (this *TTNetSession) GetLocalPeerCache() (map[string]Peer, error) {
+	peer_data, err := tt.ReadFile(this.PeerCache)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +180,12 @@ func GetLocalPeerCache() (map[string]Peer, error) {
 	return peer_list, nil
 }
 
-func GenerateLocalPeerCache(peers map[string]Peer) error {
+func (this *TTNetSession) GenerateLocalPeerCache(peers map[string]Peer) error {
+	// Create directory
+	if err := os.MkdirAll(this.RepoPath, 0777); err != nil {
+		return err
+	}
+
 	// Generate string list from peers
 	string_list := make([]string, 0)
 	for _, peer := range peers {
@@ -181,7 +194,7 @@ func GenerateLocalPeerCache(peers map[string]Peer) error {
 
 	// Write to file
 	return ioutil.WriteFile(
-		tt.TEATIME_PEER_CACHE,
+		this.PeerCache,
 		[]byte(strings.Join(string_list, "\n")),
 		0644,
 	)
