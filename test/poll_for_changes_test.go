@@ -9,9 +9,9 @@ import (
 	fs "github.com/elc1798/teatime/fs"
 )
 
-const FILE1 = "file1.txt"
-const FILE2 = "file2.txt"
-const FILE3 = "file3.txt"
+const pollFILE1 = "file1.txt"
+const pollFILE2 = "file2.txt"
+const pollFILE3 = "file3.txt"
 
 func TestPollForChanges(t *testing.T) {
 	os.RemoveAll(tt.TEATIME_DEFAULT_HOME)
@@ -44,14 +44,14 @@ func TestPollForChanges(t *testing.T) {
 	fileChanged.AppendLine("universe")
 
 	//Write original files
-	tt.WriteFileObjToPath(&fileOrig, tt.TEATIME_TRACKED_DIR+FILE1)
-	tt.WriteFileObjToPath(&fileOrig, tt.TEATIME_TRACKED_DIR+FILE2)
-	tt.WriteFileObjToPath(&fileOrig, tt.TEATIME_TRACKED_DIR+FILE3)
+	tt.WriteFileObjToPath(&fileOrig, tt.TEATIME_TRACKED_DIR+pollFILE1)
+	tt.WriteFileObjToPath(&fileOrig, tt.TEATIME_TRACKED_DIR+pollFILE2)
+	tt.WriteFileObjToPath(&fileOrig, tt.TEATIME_TRACKED_DIR+pollFILE3)
 
 	//Write backup files to diff with
-	err := fs.WriteBackupFile(FILE1)
-	err = fs.WriteBackupFile(FILE2)
-	err = fs.WriteBackupFile(FILE3)
+	err := fs.WriteBackupFile(pollFILE1)
+	err = fs.WriteBackupFile(pollFILE2)
+	err = fs.WriteBackupFile(pollFILE3)
     if err != nil {
         t.Fatalf("Error backing up: %v\n", err)
     }
@@ -61,20 +61,20 @@ func TestPollForChanges(t *testing.T) {
     time.Sleep(fs.POLLING_INTERVAL * 3 * time.Millisecond)
 
 	//Overwrite some of the tracked files
-	tt.WriteFileObjToPath(&fileChanged, tt.TEATIME_TRACKED_DIR+FILE3)
+	tt.WriteFileObjToPath(&fileChanged, tt.TEATIME_TRACKED_DIR+pollFILE3)
 
     time.Sleep(fs.POLLING_INTERVAL * 3 * time.Millisecond)
 
     select {
     case <-changeDetected:
-        fs.WriteBackupFile(FILE3)
+        fs.WriteBackupFile(pollFILE3)
     default:
         t.Fatal("Failed to detect first set of changes!\n")
     }
 
 	//Overwrite another of the tracked files
     time.Sleep(fs.POLLING_INTERVAL * 2 * time.Millisecond)
-	tt.WriteFileObjToPath(&fileChanged, tt.TEATIME_TRACKED_DIR+FILE2)
+	tt.WriteFileObjToPath(&fileChanged, tt.TEATIME_TRACKED_DIR+pollFILE2)
 
     select {
     case <-changeDetected:
