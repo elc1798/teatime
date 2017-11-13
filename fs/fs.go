@@ -8,14 +8,13 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-    "time"
+	"time"
 
 	tt "github.com/elc1798/teatime"
 	diff "github.com/elc1798/teatime/diff"
 )
 
 //TODO: Applying set of diffs to files / backing up all tracked files
-
 
 const POLLING_INTERVAL = 100
 
@@ -72,19 +71,19 @@ func WriteBackupFile(trackedFileName string) error {
 /*
  * Start polling a repo for changes.  Returns two bool channels.
  *
- * The first returned channel will have true pushed to it whenever a change is 
- * detected in the repo.  
+ * The first returned channel will have true pushed to it whenever a change is
+ * detected in the repo.
  *
  * After handling the detected changes, push a value to the second returned channel
  * to resume polling.
  */
 func StartPollingRepo(pathToRepo string) (chan bool, chan bool) {
 	updateDetectedChannel := make(chan bool)
-    resumePollingChannel := make(chan bool)
+	resumePollingChannel := make(chan bool)
 
-    go pollForChanges(pathToRepo, updateDetectedChannel, resumePollingChannel)
+	go pollForChanges(pathToRepo, updateDetectedChannel, resumePollingChannel)
 
-    return updateDetectedChannel, resumePollingChannel
+	return updateDetectedChannel, resumePollingChannel
 }
 
 /*
@@ -121,7 +120,7 @@ func haveAnyFilesChanged(pathToRepo string) (bool, error) {
 		}
 
 		if wasChanged {
-            return true, err
+			return true, err
 		}
 	}
 
@@ -192,7 +191,7 @@ func GetDiffStrings(pathToRepo string, filesToDiff []string) ([]string, error) {
 		if newErr != nil && err == nil {
 			err = newErr
 		}
-		diffValue := <- diffChannels[i]
+		diffValue := <-diffChannels[i]
 		diffStrings = append(diffStrings, diffValue)
 	}
 
@@ -203,15 +202,15 @@ func GetDiffStrings(pathToRepo string, filesToDiff []string) ([]string, error) {
  * Pushes true to signalChannel whenever changes are detected
  */
 func pollForChanges(pathToRepo string, signalChannel chan bool, resumeChannel chan bool) {
-    for {
-        changed, _ := haveAnyFilesChanged(pathToRepo)
-        if changed {
-            signalChannel <-changed
-            <-resumeChannel       //Block until resume signal is sent
-            continue
-        }
-        time.Sleep(POLLING_INTERVAL * time.Millisecond)
-    }
+	for {
+		changed, _ := haveAnyFilesChanged(pathToRepo)
+		if changed {
+			signalChannel <- changed
+			<-resumeChannel //Block until resume signal is sent
+			continue
+		}
+		time.Sleep(POLLING_INTERVAL * time.Millisecond)
+	}
 }
 
 /*

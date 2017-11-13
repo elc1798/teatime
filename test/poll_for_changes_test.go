@@ -3,7 +3,7 @@ package test
 import (
 	"os"
 	"testing"
-    "time"
+	"time"
 
 	tt "github.com/elc1798/teatime"
 	fs "github.com/elc1798/teatime/fs"
@@ -21,7 +21,6 @@ func TestPollForChanges(t *testing.T) {
 	defer os.RemoveAll(tt.TEATIME_DEFAULT_HOME)
 	defer os.RemoveAll(tt.TEATIME_TRACKED_DIR)
 	defer os.RemoveAll(tt.TEATIME_BACKUP_DIR)
-
 
 	if err := os.Mkdir(tt.TEATIME_DEFAULT_HOME, 0777); err != nil {
 		t.Fatalf("Error creating teatime home: %v\n", err)
@@ -52,43 +51,42 @@ func TestPollForChanges(t *testing.T) {
 	err := fs.WriteBackupFile(pollFILE1)
 	err = fs.WriteBackupFile(pollFILE2)
 	err = fs.WriteBackupFile(pollFILE3)
-    if err != nil {
-        t.Fatalf("Error backing up: %v\n", err)
-    }
-
+	if err != nil {
+		t.Fatalf("Error backing up: %v\n", err)
+	}
 
 	changeDetected, resumePolling := fs.StartPollingRepo(".")
-    time.Sleep(fs.POLLING_INTERVAL * 3 * time.Millisecond)
+	time.Sleep(fs.POLLING_INTERVAL * 3 * time.Millisecond)
 
 	//Overwrite some of the tracked files
 	tt.WriteFileObjToPath(&fileChanged, tt.TEATIME_TRACKED_DIR+pollFILE3)
 
-    time.Sleep(fs.POLLING_INTERVAL * 3 * time.Millisecond)
+	time.Sleep(fs.POLLING_INTERVAL * 3 * time.Millisecond)
 
-    select {
-    case <-changeDetected:
-        fs.WriteBackupFile(pollFILE3)
-    default:
-        t.Fatal("Failed to detect first set of changes!\n")
-    }
+	select {
+	case <-changeDetected:
+		fs.WriteBackupFile(pollFILE3)
+	default:
+		t.Fatal("Failed to detect first set of changes!\n")
+	}
 
 	//Overwrite another of the tracked files
-    time.Sleep(fs.POLLING_INTERVAL * 2 * time.Millisecond)
+	time.Sleep(fs.POLLING_INTERVAL * 2 * time.Millisecond)
 	tt.WriteFileObjToPath(&fileChanged, tt.TEATIME_TRACKED_DIR+pollFILE2)
 
-    select {
-    case <-changeDetected:
-        t.Fatal("Failed to wait until resume signal was sent through channel!\n")
-    default:
-        resumePolling <- true
-    }
+	select {
+	case <-changeDetected:
+		t.Fatal("Failed to wait until resume signal was sent through channel!\n")
+	default:
+		resumePolling <- true
+	}
 
-    time.Sleep(fs.POLLING_INTERVAL * 3 * time.Millisecond)
+	time.Sleep(fs.POLLING_INTERVAL * 3 * time.Millisecond)
 
-    select {
-    case <-changeDetected:
-        return
-    default:
-        t.Fatal("Failed to resume polling and detect second set of changes!\n")
-    }
+	select {
+	case <-changeDetected:
+		return
+	default:
+		t.Fatal("Failed to resume polling and detect second set of changes!\n")
+	}
 }
