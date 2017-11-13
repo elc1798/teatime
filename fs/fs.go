@@ -4,13 +4,14 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	tt "github.com/elc1798/teatime"
-	diff "github.com/elc1798/teatime/diff"
 	"io"
 	ioutil "io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
+
+	tt "github.com/elc1798/teatime"
+	diff "github.com/elc1798/teatime/diff"
 )
 
 /*
