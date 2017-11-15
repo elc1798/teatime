@@ -14,7 +14,7 @@ import (
 	diff "github.com/elc1798/teatime/diff"
 )
 
-//TODO: Applying set of diffs to files / backing up all tracked files
+//TODO: Applying set of diffs to files 
 
 const POLLING_INTERVAL = 100
 
@@ -65,6 +65,37 @@ func WriteBackupFile(trackedFileName string) error {
 	}
 
 	err := CopyFile(getTrackedFolderPath()+trackedFileName, getBackupFolderPath()+trackedFileName)
+	return err
+}
+
+/*
+ * Rewrites the backup file for all of the filenames in the given list in the given repo
+ */
+func WriteMultipleBackupFiles(pathToRepo string, fileNameList []string) error {
+	err := os.Chdir(pathToRepo)
+	if err != nil {
+		return err
+	}
+
+	//Send out task to check for difference in each file in tracked directory
+	var numFiles int = len(fileNameList)
+	errChannels := make([]chan error, numFiles)
+	for i := 0; i < numFiles; i++ {
+		errChannels[i] = make(chan error)
+		go func(errChan chan error, fileName string) {
+            backupErr := WriteBackupFile(fileName)
+            errChan<-backupErr
+        }(errChannels[i], fileNameList[i])
+	}
+
+	//Receive the results and build result string array
+	for i := 0; i < numFiles; i++ {
+		newErr := <-errChannels[i]
+		if newErr != nil && err == nil {
+			err = newErr
+		}
+	}
+
 	return err
 }
 
@@ -199,7 +230,54 @@ func GetDiffStrings(pathToRepo string, filesToDiff []string) ([]string, error) {
 }
 
 /*
- * Pushes true to signalChannel whenever changes are detected
+ * Patches all files in filesToPatch with the corresponding delta string from diffStrings.
+ * Writes all changed to the tracked files.
+ *
+ * Note: Does not overwrite the backup files
+ * Also note: (untested as of now)
+ */
+func ApplyDiffs(pathToRepo string, filesToPatch []string, diffStrings []string) error {
+	err := os.Chdir(pathToRepo)
+	if err != nil {
+		return err
+	}
+
+	//Send out task to apply diff to file
+	var numToPatch int = len(filesToPatch)
+	errChannels := make([]chan error, numToPatch)
+	for i := 0; i < numToPatch; i++ {
+		errChannels[i] = make(chan error)
+		go func(fileName string, diffString string, errChan chan error) {
+            patchErr := PatchFile(fileName, diffString)
+            errChan<-patchErr
+        }(filesToPatch[i], diffStrings[i], errChannels[i])
+	}
+
+	//Receive any errors
+	for i := 0; i < numToPatch; i++ {
+		newErr := <-errChannels[i]
+		if newErr != nil && err == nil {
+			err = newErr
+		}
+	}
+
+	return err
+}
+
+func PatchFile(fileName string, diffString string) error {
+    var filepath string = tt.TEATIME_TRACKED_DIR + fileName
+    basefileptr, err := tt.GetFileObjFromFile(filepath)
+    if err != nil {
+        return err
+    }
+    newfileobj := diff.ApplyDiff(*basefileptr, diffString)
+    err = tt.WriteFileObjToPath(&newfileobj, filepath)
+    return err
+}
+
+/*
+ * Pushes true to signalChannel whenever changes are detected, then waits on a value being
+ * pushed onto the resumeChannel before resuming polling.
  */
 func pollForChanges(pathToRepo string, signalChannel chan bool, resumeChannel chan bool) {
 	for {
