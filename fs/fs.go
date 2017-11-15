@@ -14,7 +14,7 @@ import (
 	diff "github.com/elc1798/teatime/diff"
 )
 
-//TODO: Applying set of diffs to files 
+//TODO: Applying set of diffs to files
 
 const POLLING_INTERVAL = 100
 
@@ -83,9 +83,9 @@ func WriteMultipleBackupFiles(pathToRepo string, fileNameList []string) error {
 	for i := 0; i < numFiles; i++ {
 		errChannels[i] = make(chan error)
 		go func(errChan chan error, fileName string) {
-            backupErr := WriteBackupFile(fileName)
-            errChan<-backupErr
-        }(errChannels[i], fileNameList[i])
+			backupErr := WriteBackupFile(fileName)
+			errChan <- backupErr
+		}(errChannels[i], fileNameList[i])
 	}
 
 	//Receive the results and build result string array
@@ -248,9 +248,9 @@ func ApplyDiffs(pathToRepo string, filesToPatch []string, diffStrings []string) 
 	for i := 0; i < numToPatch; i++ {
 		errChannels[i] = make(chan error)
 		go func(fileName string, diffString string, errChan chan error) {
-            patchErr := PatchFile(fileName, diffString)
-            errChan<-patchErr
-        }(filesToPatch[i], diffStrings[i], errChannels[i])
+			patchErr := PatchFile(fileName, diffString)
+			errChan <- patchErr
+		}(filesToPatch[i], diffStrings[i], errChannels[i])
 	}
 
 	//Receive any errors
@@ -265,14 +265,14 @@ func ApplyDiffs(pathToRepo string, filesToPatch []string, diffStrings []string) 
 }
 
 func PatchFile(fileName string, diffString string) error {
-    var filepath string = tt.TEATIME_TRACKED_DIR + fileName
-    basefileptr, err := tt.GetFileObjFromFile(filepath)
-    if err != nil {
-        return err
-    }
-    newfileobj := diff.ApplyDiff(*basefileptr, diffString)
-    err = tt.WriteFileObjToPath(&newfileobj, filepath)
-    return err
+	var filepath string = tt.TEATIME_TRACKED_DIR + fileName
+	basefileptr, err := tt.GetFileObjFromFile(filepath)
+	if err != nil {
+		return err
+	}
+	newfileobj := diff.ApplyDiff(*basefileptr, diffString)
+	err = tt.WriteFileObjToPath(&newfileobj, filepath)
+	return err
 }
 
 /*

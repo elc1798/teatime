@@ -23,14 +23,14 @@ func main() {
 	case "back":
 		err := fs.WriteBackupFile(args[1])
 		printErrOrSuccess(err)
-    case "backAllChanged":
-        changed, err := fs.GetChangedFiles(".")
-        if err != nil {
-		    printErrOrSuccess(err)
-        }
+	case "backAllChanged":
+		changed, err := fs.GetChangedFiles(".")
+		if err != nil {
+			printErrOrSuccess(err)
+		}
 
-        err = fs.WriteMultipleBackupFiles(".", changed)
-        printErrOrSuccess(err)
+		err = fs.WriteMultipleBackupFiles(".", changed)
+		printErrOrSuccess(err)
 	case "help":
 		printHelp()
 	default:
