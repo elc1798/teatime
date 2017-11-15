@@ -11,7 +11,6 @@ import (
 	"time"
 
 	tt "github.com/elc1798/teatime"
-	fs "github.com/elc1798/teatime/fs"
 )
 
 func (this *TTNetSession) sendTTPing(peerID string) error {
@@ -97,7 +96,7 @@ func (this *TTNetSession) startChangeNotifier(peerID string) {
 
 	for {
 		log.Printf("Polling for new files at %v", time.Now())
-		changedFiles, err := fs.GetChangedFiles(this.RepoPath)
+		changedFiles, err := this.Repo.GetChangedFiles()
 
 		log.Printf("Files changed: %v, err: %v", changedFiles, err)
 		if changedFiles != nil && len(changedFiles) > 0 {

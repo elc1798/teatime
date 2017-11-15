@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"os"
+	"path"
 	"strings"
 )
 
@@ -13,7 +14,9 @@ const TEATIME_TRACKED_DIR = ".tracked/"
 const TEATIME_BACKUP_DIR = ".backup/"
 const TEATIME_PEER_CACHE = "/peer_cache"
 
-var TEATIME_DEFAULT_HOME = os.Getenv("HOME") + "/.teatime/"
+var TEATIME_DEFAULT_HOME = path.Join(os.Getenv("HOME"), ".teatime/")
+
+const TEATIME_DIR_ROOT_STORE = "/dir_root"
 
 const TEATIME_NET_SYN = "teatime_syn"
 const TEATIME_NET_ACK = "teatime_ack"
@@ -23,7 +26,6 @@ const TEATIME_ALIVE_PING = "tt_alive?"
 const TEATIME_GUCCI_PONG = "tt_we_gucci"
 
 // Utils
-
 func ReadFile(path string) ([]string, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -115,4 +117,9 @@ func WriteFileObjToPath(fileObj *File, path string) error {
 	}
 	writer.Flush()
 	return err
+}
+
+func ResetTeatime() error {
+	os.RemoveAll(TEATIME_DEFAULT_HOME)
+	return os.Mkdir(TEATIME_DEFAULT_HOME, 0755)
 }

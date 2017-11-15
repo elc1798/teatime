@@ -12,19 +12,24 @@ import (
 
 const REPO_1 = "tt_test1"
 const REPO_2 = "tt_test2"
+const PING_INTERVAL = time.Millisecond * 150
 
 func TestBasicServer(t *testing.T) {
-	// Set up
-	pingInterval := time.Millisecond * 150
+	// Clear original teatime directory
+	tt.ResetTeatime()
 
-	serverSession := p2p.NewTTNetSession(REPO_1)
+	r1, d1, _ := setUpRepos(REPO_1)
+	defer os.RemoveAll(d1)
+	serverSession := p2p.NewTTNetSession(r1)
 	serverSession.StartListener(12345, false)
 
-	testSession := p2p.NewTTNetSession(REPO_2)
+	r2, d2, _ := setUpRepos(REPO_2)
+	defer os.RemoveAll(d2)
+	testSession := p2p.NewTTNetSession(r2)
 	timer := time.NewTimer(time.Millisecond * 300)
 
 	start_time := time.Now()
-	err := testSession.TryTeaTimeConn("localhost:12345", pingInterval)
+	err := testSession.TryTeaTimeConn("localhost:12345", PING_INTERVAL)
 	t.Logf("Connection took %v", time.Since(start_time))
 
 	<-timer.C

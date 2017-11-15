@@ -1,22 +1,16 @@
 package fs
 
 import (
-	"errors"
-	"fmt"
-	"io"
 	ioutil "io/ioutil"
-	"math/rand"
+	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 
 	tt "github.com/elc1798/teatime"
 	diff "github.com/elc1798/teatime/diff"
 )
-
-//TODO: Applying set of diffs to files / backing up all tracked files
-
-const POLLING_INTERVAL = 100
 
 /*
  * Creates a hard link to the file at the given path, and places it in the tracked folder
@@ -26,26 +20,26 @@ const POLLING_INTERVAL = 100
  * Returns any system error that occurs, or an error signifying that a file with the same
  * name is already being tracked, or that the current directory is not a TeaTime repo.
  */
-func AddTrackedFile(path string) error {
-	_, file := filepath.Split(path)
-	tempLinkName := getTempLinkName(file)
-	finalLinkPath := getTrackedFolderPath() + file
-
-	if !pathExists(getTrackedFolderPath()) {
-		return ErrorNotRepo()
+func (this *Repo) AddFile(relativePath string) error {
+	if !isRepoValid(this) {
+		return ErrorNotRepo(this.RepoDir)
 	}
+
+	_, file := filepath.Split(relativePath)
+	tempLinkName := getTempLinkName(file)
+	finalLinkPath := path.Join(this.GetTrackedDir(), relativePath)
 
 	if pathExists(finalLinkPath) {
-		return ErrorAlreadyTrackingFile(file)
+		return ErrorAlreadyTrackingFile(relativePath)
 	}
 
-	err := os.Link(path, tempLinkName)
+	err := os.Link(path.Join(this.RootDir, relativePath), tempLinkName)
 	if err != nil {
 		return err
 	}
 
-	err = os.Rename(tempLinkName, finalLinkPath)
-	return err
+	defer this.WriteBackupFile(relativePath)
+	return os.Rename(tempLinkName, finalLinkPath)
 }
 
 /*
@@ -55,48 +49,30 @@ func AddTrackedFile(path string) error {
  * Returns any system error that occurs, or an error signifying that a file with the same
  * name is already being tracked, or that the current directory is not a TeaTime repo.
  */
-func WriteBackupFile(trackedFileName string) error {
-	if !pathExists(getTrackedFolderPath()) || !pathExists(getBackupFolderPath()) {
-		return ErrorNotRepo()
+func (this *Repo) WriteBackupFile(trackedRelPath string) error {
+	if !isRepoValid(this) {
+		return ErrorNotRepo(this.RepoDir)
 	}
 
-	if !pathExists(getTrackedFolderPath() + trackedFileName) {
-		return ErrorNotTrackingFile(trackedFileName)
+	if !pathExists(path.Join(this.GetTrackedDir(), trackedRelPath)) {
+		return ErrorNotTrackingFile(trackedRelPath)
 	}
 
-	err := CopyFile(getTrackedFolderPath()+trackedFileName, getBackupFolderPath()+trackedFileName)
+	err := CopyFile(
+		path.Join(this.GetTrackedDir(), trackedRelPath),
+		path.Join(this.GetBackupDir(), trackedRelPath),
+	)
 	return err
-}
-
-/*
- * Start polling a repo for changes.  Returns two bool channels.
- *
- * The first returned channel will have true pushed to it whenever a change is
- * detected in the repo.
- *
- * After handling the detected changes, push a value to the second returned channel
- * to resume polling.
- */
-func StartPollingRepo(pathToRepo string) (chan bool, chan bool) {
-	updateDetectedChannel := make(chan bool)
-	resumePollingChannel := make(chan bool)
-
-	go pollForChanges(pathToRepo, updateDetectedChannel, resumePollingChannel)
-
-	return updateDetectedChannel, resumePollingChannel
 }
 
 /*
  * Returns true if any file in the repo has been changed.
  */
-func haveAnyFilesChanged(pathToRepo string) (bool, error) {
-	err := os.Chdir(pathToRepo)
-	if err != nil {
-		return false, err
-	}
+func (this *Repo) haveAnyFilesChanged() (bool, error) {
+	log.Println("haveAnyFilesChanged called!")
 
 	//Send out task to check for difference in each file in tracked directory
-	files, err := ioutil.ReadDir(tt.TEATIME_TRACKED_DIR)
+	files, err := ioutil.ReadDir(this.GetTrackedDir())
 	var numTracked int = len(files)
 	diffChannels := make([]chan bool, numTracked)
 	errChannels := make([]chan error, numTracked)
@@ -107,7 +83,7 @@ func haveAnyFilesChanged(pathToRepo string) (bool, error) {
 			diffChannels[i] <- false
 			continue
 		}
-		go fileWasChanged(diffChannels[i], errChannels[i], files[i].Name())
+		go this.fileWasChanged(diffChannels[i], errChannels[i], files[i].Name())
 	}
 
 	//Receive the results
@@ -131,14 +107,9 @@ func haveAnyFilesChanged(pathToRepo string) (bool, error) {
  * Returns a list of filenames for all the files that have changes in the repo directory given.
  * Uses goroutines to work in parallel for each file in the directory.
  */
-func GetChangedFiles(pathToRepo string) ([]string, error) {
-	err := os.Chdir(pathToRepo)
-	if err != nil {
-		return nil, err
-	}
-
+func (this *Repo) GetChangedFiles() ([]string, error) {
 	//Send out task to check for difference in each file in tracked directory
-	files, err := ioutil.ReadDir(tt.TEATIME_TRACKED_DIR)
+	files, err := ioutil.ReadDir(this.GetTrackedDir())
 	var numTracked int = len(files)
 	diffChannels := make([]chan bool, numTracked)
 	errChannels := make([]chan error, numTracked)
@@ -149,7 +120,7 @@ func GetChangedFiles(pathToRepo string) ([]string, error) {
 			diffChannels[i] <- false
 			continue
 		}
-		go fileWasChanged(diffChannels[i], errChannels[i], files[i].Name())
+		go this.fileWasChanged(diffChannels[i], errChannels[i], files[i].Name())
 	}
 
 	//Receive the results and build result string array
@@ -168,12 +139,7 @@ func GetChangedFiles(pathToRepo string) ([]string, error) {
 	return changedFiles, err
 }
 
-func GetDiffStrings(pathToRepo string, filesToDiff []string) ([]string, error) {
-	err := os.Chdir(pathToRepo)
-	if err != nil {
-		return nil, err
-	}
-
+func (this *Repo) GetDiffStrings(filesToDiff []string) ([]string, []error) {
 	//Send out task to build diffstring from file
 	var numToDiff int = len(filesToDiff)
 	diffChannels := make([]chan string, numToDiff)
@@ -181,36 +147,19 @@ func GetDiffStrings(pathToRepo string, filesToDiff []string) ([]string, error) {
 	for i := 0; i < numToDiff; i++ {
 		diffChannels[i] = make(chan string)
 		errChannels[i] = make(chan error)
-		go getDiffString(diffChannels[i], errChannels[i], filesToDiff[i])
+		go this.getDiffString(diffChannels[i], errChannels[i], filesToDiff[i])
 	}
 
 	//Receive the results and build result string array
 	var diffStrings []string
+	var errors []error
 	for i := 0; i < numToDiff; i++ {
-		newErr := <-errChannels[i]
-		if newErr != nil && err == nil {
-			err = newErr
-		}
+		errors[i] = <-errChannels[i]
 		diffValue := <-diffChannels[i]
 		diffStrings = append(diffStrings, diffValue)
 	}
 
-	return diffStrings, err
-}
-
-/*
- * Pushes true to signalChannel whenever changes are detected
- */
-func pollForChanges(pathToRepo string, signalChannel chan bool, resumeChannel chan bool) {
-	for {
-		changed, _ := haveAnyFilesChanged(pathToRepo)
-		if changed {
-			signalChannel <- changed
-			<-resumeChannel //Block until resume signal is sent
-			continue
-		}
-		time.Sleep(POLLING_INTERVAL * time.Millisecond)
-	}
+	return diffStrings, errors
 }
 
 /*
@@ -221,14 +170,14 @@ func pollForChanges(pathToRepo string, signalChannel chan bool, resumeChannel ch
  *      result : true if the file was modified (backup and tracked file have different hashes), false otherwise
  *      err    : any error that occurred during this process
  */
-func fileWasChanged(result chan bool, errChan chan error, fileName string) {
-	fileTracked, err := tt.GetFileObjFromFile(tt.TEATIME_TRACKED_DIR + fileName)
+func (this *Repo) fileWasChanged(result chan bool, errChan chan error, fileName string) {
+	fileTracked, err := tt.GetFileObjFromFile(path.Join(this.GetTrackedDir(), fileName))
 	if err != nil {
 		result <- false
 		errChan <- err
 		return
 	}
-	fileBackup, err := tt.GetFileObjFromFile(tt.TEATIME_BACKUP_DIR + fileName)
+	fileBackup, err := tt.GetFileObjFromFile(path.Join(this.GetBackupDir(), fileName))
 	if err != nil {
 		result <- false
 		errChan <- err
@@ -239,14 +188,14 @@ func fileWasChanged(result chan bool, errChan chan error, fileName string) {
 	errChan <- err
 }
 
-func getDiffString(result chan string, errChan chan error, fileName string) {
-	fileTracked, err := tt.GetFileObjFromFile(tt.TEATIME_TRACKED_DIR + fileName)
+func (this *Repo) getDiffString(result chan string, errChan chan error, fileName string) {
+	fileTracked, err := tt.GetFileObjFromFile(path.Join(this.GetTrackedDir(), fileName))
 	if err != nil {
 		result <- ""
 		errChan <- err
 		return
 	}
-	fileBackup, err := tt.GetFileObjFromFile(tt.TEATIME_BACKUP_DIR + fileName)
+	fileBackup, err := tt.GetFileObjFromFile(path.Join(this.GetBackupDir(), fileName))
 	if err != nil {
 		result <- ""
 		errChan <- err
@@ -257,74 +206,37 @@ func getDiffString(result chan string, errChan chan error, fileName string) {
 	errChan <- err
 }
 
-func CopyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, in)
-	if err != nil {
-		return err
-	}
-
-	return out.Close()
-}
-
 /*
- * Returns either the TEATIME_HOME environment variable, or the default home if the environment
- * variable is not set.
+ * Pushes true to signalChannel whenever changes are detected, then waits on a value being
+ * pushed onto the resumeChannel before resuming polling.
  */
-func getTTHome() string {
-	home := os.Getenv("TEATIME_HOME")
-	if home == "" {
-		return tt.TEATIME_DEFAULT_HOME
-	} else {
-		return home
+func (this *Repo) pollForChanges(signalChannel chan bool, resumeChannel chan bool) {
+	ticker := time.NewTicker(time.Millisecond * 250)
+	for {
+		changed, _ := this.haveAnyFilesChanged()
+		if changed {
+			signalChannel <- changed
+			<-resumeChannel //Block until resume signal is sent
+		}
+
+		<-ticker.C
 	}
 }
 
 /*
- * Returns a string for the full path for the tracked folder
+ * Start polling a repo for changes.  Returns two bool channels.
+ *
+ * The first returned channel will have true pushed to it whenever a change is
+ * detected in the repo.
+ *
+ * After handling the detected changes, push a value to the second returned channel
+ * to resume polling.
  */
-func getTrackedFolderPath() string {
-	return tt.TEATIME_TRACKED_DIR
-}
+func (this *Repo) StartPollingRepo() (chan bool, chan bool) {
+	updateDetectedChannel := make(chan bool)
+	resumePollingChannel := make(chan bool)
 
-/*
- * Returns a string for the full path for the tracked folder
- */
-func getBackupFolderPath() string {
-	return tt.TEATIME_BACKUP_DIR
-}
+	go this.pollForChanges(updateDetectedChannel, resumePollingChannel)
 
-/*
- * Naive method for generating unique filename for temporary creation/usage.
- */
-func getTempLinkName(path string) string {
-	return fmt.Sprintf("%s%s%d", path, ".link.", rand.Int31())
-}
-
-func ErrorNotRepo() error {
-	return errors.New("Working directory is not a TeaTime repo directory.")
-}
-
-func ErrorAlreadyTrackingFile(filename string) error {
-	return errors.New("Already tracking a file with name: " + filename)
-}
-
-func ErrorNotTrackingFile(filename string) error {
-	return errors.New("Not tracking a file with name: " + filename)
-}
-
-func pathExists(path string) bool {
-	_, stat_err := os.Stat(path)
-	return !os.IsNotExist(stat_err)
+	return updateDetectedChannel, resumePollingChannel
 }

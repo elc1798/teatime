@@ -11,10 +11,10 @@ import (
 const REPO = "tt_test"
 
 func TestPeerCache(t *testing.T) {
-	os.RemoveAll(tt.TEATIME_DEFAULT_HOME)
-	if err := os.Mkdir(tt.TEATIME_DEFAULT_HOME, 0777); err != nil {
-		t.Fatalf("Error creating teatime home: %v\n", err)
-	}
+	// Clear original teatime directory
+	tt.ResetTeatime()
+
+	r1, d1, _ := setUpRepos(REPO)
 
 	testPeerList := map[string]p2p.Peer{
 		"1.2.3.4:80":         p2p.Peer{IP: "1.2.3.4", Port: 80},
@@ -24,7 +24,7 @@ func TestPeerCache(t *testing.T) {
 		"192.17.13.36:1111":  p2p.Peer{IP: "192.17.13.36", Port: 1111},
 	}
 
-	testSession := p2p.NewTTNetSession(REPO)
+	testSession := p2p.NewTTNetSession(r1)
 	if err := testSession.GenerateLocalPeerCache(testPeerList); err != nil {
 		t.Fatalf("Error creating peer cache: %v\n", err)
 	}
@@ -45,4 +45,5 @@ func TestPeerCache(t *testing.T) {
 	}
 
 	os.RemoveAll(tt.TEATIME_DEFAULT_HOME)
+	os.RemoveAll(d1)
 }
