@@ -240,3 +240,67 @@ func (this *Repo) StartPollingRepo() (chan bool, chan bool) {
 
 	return updateDetectedChannel, resumePollingChannel
 }
+
+/*
+ * Rewrites the backup file for all of the filenames in the given list in the given repo
+ */
+func (this *Repo) WriteMultipleBackupFiles(fileNameList []string) []error {
+	//Send out task to check for difference in each file in tracked directory
+	var numFiles int = len(fileNameList)
+	errChannels := make([]chan error, numFiles)
+	for i := 0; i < numFiles; i++ {
+		errChannels[i] = make(chan error)
+		go func(errChan chan error, fileName string) {
+			backupErr := this.WriteBackupFile(fileName)
+			errChan <- backupErr
+		}(errChannels[i], fileNameList[i])
+	}
+
+	//Receive the results and build result string array
+	errors := make([]error, numFiles)
+	for i := 0; i < numFiles; i++ {
+		errors[i] = <-errChannels[i]
+	}
+
+	return errors
+}
+
+/*
+ * Patches all files in filesToPatch with the corresponding delta string from diffStrings.
+ * Writes all changed to the tracked files.
+ *
+ * Note: Does not overwrite the backup files
+ * Also note: (untested as of now)
+ */
+func (this *Repo) ApplyDiffs(filesToPatch []string, diffStrings []string) []error {
+	//Send out task to apply diff to file
+	var numToPatch int = len(filesToPatch)
+	errChannels := make([]chan error, numToPatch)
+	for i := 0; i < numToPatch; i++ {
+		errChannels[i] = make(chan error)
+		go func(fileName string, diffString string, errChan chan error) {
+			patchErr := this.PatchFile(fileName, diffString)
+			errChan <- patchErr
+		}(filesToPatch[i], diffStrings[i], errChannels[i])
+	}
+
+	//Receive any errors
+	errors := make([]error, numToPatch)
+	for i := 0; i < numToPatch; i++ {
+		errors[i] = <-errChannels[i]
+	}
+
+	return errors
+}
+
+func (this *Repo) PatchFile(fileName string, diffString string) error {
+	filepath := path.Join(this.GetTrackedDir(), fileName)
+	basefileptr, err := tt.GetFileObjFromFile(filepath)
+	if err != nil {
+		return err
+	}
+
+	newfileobj := diff.ApplyDiff(*basefileptr, diffString)
+	err = tt.WriteFileObjToPath(&newfileobj, filepath)
+	return err
+}
