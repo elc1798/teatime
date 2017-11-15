@@ -11,6 +11,7 @@ import (
 	"time"
 
 	tt "github.com/elc1798/teatime"
+	fs "github.com/elc1798/teatime/fs"
 )
 
 func (this *TTNetSession) sendTTPing(peerID string) error {
@@ -60,6 +61,7 @@ func (this *TTNetSession) respondToData(peerID string) error {
 			this.sendTTPong(peerID)
 		} else {
 			// TODO: Send received to delegate function
+			log.Printf("Received: %v", string(resp))
 		}
 	}
 
@@ -86,6 +88,25 @@ func (this *TTNetSession) startPingService(peerID string, pingInterval time.Dura
 			break
 		}
 
+		<-ticker.C
+	}
+}
+
+func (this *TTNetSession) startChangeNotifier(peerID string) {
+	ticker := time.NewTicker(1 * time.Second)
+
+	for {
+		log.Printf("Polling for new files at %v", time.Now())
+		changedFiles, err := fs.GetChangedFiles(this.RepoPath)
+
+		log.Printf("Files changed: %v, err: %v", changedFiles, err)
+		if changedFiles != nil && len(changedFiles) > 0 {
+			s := ChangedFileListSerializer{}
+			encoded, err := s.Serialize(changedFiles)
+			if err == nil {
+				SendData(this.PeerConns[peerID], encoded)
+			}
+		}
 		<-ticker.C
 	}
 }

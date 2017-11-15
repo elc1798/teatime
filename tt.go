@@ -11,9 +11,9 @@ import (
 
 const TEATIME_TRACKED_DIR = ".tracked/"
 const TEATIME_BACKUP_DIR = ".backup/"
+const TEATIME_PEER_CACHE = "/peer_cache"
 
-var TEATIME_DEFAULT_HOME = os.Getenv("HOME") + "/.teatime"
-var TEATIME_PEER_CACHE = TEATIME_DEFAULT_HOME + "/peer_cache"
+var TEATIME_DEFAULT_HOME = os.Getenv("HOME") + "/.teatime/"
 
 const TEATIME_NET_SYN = "teatime_syn"
 const TEATIME_NET_ACK = "teatime_ack"

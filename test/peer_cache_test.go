@@ -8,6 +8,8 @@ import (
 	p2p "github.com/elc1798/teatime/p2p"
 )
 
+const REPO = "tt_test"
+
 func TestPeerCache(t *testing.T) {
 	os.RemoveAll(tt.TEATIME_DEFAULT_HOME)
 	if err := os.Mkdir(tt.TEATIME_DEFAULT_HOME, 0777); err != nil {
@@ -22,11 +24,12 @@ func TestPeerCache(t *testing.T) {
 		"192.17.13.36:1111":  p2p.Peer{IP: "192.17.13.36", Port: 1111},
 	}
 
-	if err := p2p.GenerateLocalPeerCache(testPeerList); err != nil {
+	testSession := p2p.NewTTNetSession(REPO)
+	if err := testSession.GenerateLocalPeerCache(testPeerList); err != nil {
 		t.Fatalf("Error creating peer cache: %v\n", err)
 	}
 
-	readPeerList, err := p2p.GetLocalPeerCache()
+	readPeerList, err := testSession.GetLocalPeerCache()
 	if err != nil {
 		t.Fatalf("Error reading local cache: %v\n", err)
 	}

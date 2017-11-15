@@ -1,21 +1,26 @@
 package test
 
 import (
+	"os"
 	"reflect"
 	"testing"
 	"time"
 
+	tt "github.com/elc1798/teatime"
 	p2p "github.com/elc1798/teatime/p2p"
 )
+
+const REPO_1 = "tt_test1"
+const REPO_2 = "tt_test2"
 
 func TestBasicServer(t *testing.T) {
 	// Set up
 	pingInterval := time.Millisecond * 150
 
-	serverSession := p2p.NewTTNetSession()
+	serverSession := p2p.NewTTNetSession(REPO_1)
 	serverSession.StartListener(12345, false)
 
-	testSession := p2p.NewTTNetSession()
+	testSession := p2p.NewTTNetSession(REPO_2)
 	timer := time.NewTimer(time.Millisecond * 300)
 
 	start_time := time.Now()
@@ -86,4 +91,6 @@ func TestBasicServer(t *testing.T) {
 			t.Fatalf("ServerSession has %d of %d %s", v1, sol[1], field)
 		}
 	}
+
+	os.RemoveAll(tt.TEATIME_DEFAULT_HOME)
 }
