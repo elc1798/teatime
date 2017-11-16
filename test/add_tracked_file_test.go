@@ -17,7 +17,7 @@ func TestAddTrackedFile(t *testing.T) {
 
 	repoDir := path.Join(os.Getenv("HOME"), "test_repo")
 	os.Mkdir(repoDir, 0755)
-	if err := fs.InitRepo("test_repo", repoDir); err != nil {
+	if _, err := fs.InitRepo("test_repo", repoDir); err != nil {
 		t.Fatalf("Error creating repo: '%v'", err)
 	}
 
