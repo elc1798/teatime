@@ -31,19 +31,19 @@ func (this *Repo) Remove() error {
 	return os.RemoveAll(this.RepoDir)
 }
 
-func InitRepo(name string, pathToRepo string) error {
+func InitRepo(name string, pathToRepo string) (*Repo, error) {
 	repoDir := path.Join(tt.TEATIME_DEFAULT_HOME, name)
 
 	// Check if Repo exists
 	if pathExists(repoDir) {
-		return ErrorRepoAlreadyExists(name)
+		return nil, ErrorRepoAlreadyExists(name)
 	}
 
 	// Set up directory
 	if err := os.MkdirAll(repoDir, 0755); err != nil {
 		defer os.RemoveAll(repoDir)
 
-		return err
+		return nil, err
 	}
 
 	// Set up tracked and backup directors
@@ -54,10 +54,10 @@ func InitRepo(name string, pathToRepo string) error {
 	if err := ioutil.WriteFile(path.Join(repoDir, tt.TEATIME_DIR_ROOT_STORE), []byte(pathToRepo), 0644); err != nil {
 		defer os.RemoveAll(repoDir)
 
-		return err
+		return nil, err
 	}
 
-	return nil
+	return LoadRepo(name)
 }
 
 func LoadRepo(name string) (*Repo, error) {
