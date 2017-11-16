@@ -49,6 +49,7 @@ func InitRepo(name string, pathToRepo string) (*Repo, error) {
 	// Set up tracked and backup directors
 	os.MkdirAll(path.Join(repoDir, tt.TEATIME_TRACKED_DIR), 0755)
 	os.MkdirAll(path.Join(repoDir, tt.TEATIME_BACKUP_DIR), 0755)
+	os.Create(path.Join(repoDir, tt.TEATIME_PEER_CACHE))
 
 	// Set up DIR_ROOT_STORE (file that stores path to root of repo
 	if err := ioutil.WriteFile(path.Join(repoDir, tt.TEATIME_DIR_ROOT_STORE), []byte(pathToRepo), 0644); err != nil {

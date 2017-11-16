@@ -25,7 +25,8 @@ func TestPeerCache(t *testing.T) {
 	}
 
 	testSession := p2p.NewTTNetSession(r1)
-	if err := testSession.GenerateLocalPeerCache(testPeerList); err != nil {
+	testSession.PeerList = testPeerList
+	if err := testSession.GenerateLocalPeerCache(); err != nil {
 		t.Fatalf("Error creating peer cache: %v\n", err)
 	}
 

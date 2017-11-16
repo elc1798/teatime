@@ -66,6 +66,7 @@ func handleConnection(sess *TTNetSession, conn *net.TCPConn) {
 
 	// Start listener
 	go sess.startConnListener(key)
+	sess.GenerateLocalPeerCache()
 }
 
 /*

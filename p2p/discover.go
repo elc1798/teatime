@@ -39,11 +39,14 @@ const CentralAuthorityHost = "tsukiumi.elc1798.tech:9001"
  */
 func NewTTNetSession(repo *fs.Repo) *TTNetSession {
 	newSession := new(TTNetSession)
+	newSession.Repo = repo
 	newSession.CAConn = nil
 	newSession.PeerConns = make(map[string]*net.TCPConn)
-	newSession.PeerList = make(map[string]Peer)
+	newSession.PeerList, _ = newSession.GetLocalPeerCache()
+	for _, peer := range newSession.PeerList {
+		_ = newSession.TryTeaTimeConn(fmt.Sprintf("%s:%d", peer.IP, peer.Port), time.Millisecond*250)
+	}
 	newSession.Listener = nil
-	newSession.Repo = repo
 
 	newSession.NumPingsSent = 0
 	newSession.NumPingsRcvd = 0
@@ -178,10 +181,10 @@ func (this *TTNetSession) GetLocalPeerCache() (map[string]Peer, error) {
 	return peer_list, nil
 }
 
-func (this *TTNetSession) GenerateLocalPeerCache(peers map[string]Peer) error {
+func (this *TTNetSession) GenerateLocalPeerCache() error {
 	// Generate string list from peers
 	string_list := make([]string, 0)
-	for _, peer := range peers {
+	for _, peer := range this.PeerList {
 		string_list = append(string_list, fmt.Sprintf("%s:%d", peer.IP, peer.Port))
 	}
 
