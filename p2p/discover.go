@@ -22,7 +22,6 @@ type TTNetSession struct {
 	CAConn    *net.TCPConn            // Connection to central authority
 	PeerConns map[string]*net.TCPConn // List of peer connections
 	PeerList  map[string]Peer
-	Listener  *net.TCPListener
 	Repo      *fs.Repo
 
 	// Counters
@@ -46,7 +45,6 @@ func NewTTNetSession(repo *fs.Repo) *TTNetSession {
 	for _, peer := range newSession.PeerList {
 		_ = newSession.TryTeaTimeConn(fmt.Sprintf("%s:%d", peer.IP, peer.Port), time.Millisecond*250)
 	}
-	newSession.Listener = nil
 
 	newSession.NumPingsSent = 0
 	newSession.NumPingsRcvd = 0

@@ -20,12 +20,12 @@ func TestBasicServer(t *testing.T) {
 
 	r1, d1, _ := setUpRepos(REPO_1)
 	defer os.RemoveAll(d1)
-	serverSession := p2p.NewTTNetSession(r1)
+	serverSession := p2p.NewTestSession(r1)
 	serverSession.StartListener(12345, false)
 
 	r2, d2, _ := setUpRepos(REPO_2)
 	defer os.RemoveAll(d2)
-	testSession := p2p.NewTTNetSession(r2)
+	testSession := p2p.NewTestSession(r2)
 	timer := time.NewTimer(time.Millisecond * 300)
 
 	start_time := time.Now()
@@ -75,7 +75,7 @@ func TestBasicServer(t *testing.T) {
 		"NumPongsRcvd": [2]int{2, 0},
 	}
 
-	getValue := func(sess *p2p.TTNetSession, field string) int {
+	getValue := func(sess *p2p.TestSession, field string) int {
 		r1 := reflect.ValueOf(sess)
 		f1 := reflect.Indirect(r1).FieldByName(field)
 		return int(f1.Int())

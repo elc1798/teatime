@@ -1,5 +1,10 @@
 package p2p
 
+/*
+ * These functions are only here for TESTING purposes. They should not be called
+ * OUTSIDE of tests.
+ */
+
 import (
 	"errors"
 	"fmt"
@@ -9,7 +14,13 @@ import (
 	"time"
 
 	tt "github.com/elc1798/teatime"
+	fs "github.com/elc1798/teatime/fs"
 )
+
+type TestSession struct {
+	*TTNetSession
+	Listener *net.TCPListener
+}
 
 /*
  * Performs a 3-way handshake (syn, ack, syn-ack) from the server's perspective
@@ -39,7 +50,7 @@ func doTeatimeServerHandshake(conn *net.TCPConn) error {
  * Handles an incoming TCP connection. Performs handshake and metadata
  * bookkeeping
  */
-func handleConnection(sess *TTNetSession, conn *net.TCPConn) {
+func handleConnection(sess *TestSession, conn *net.TCPConn) {
 	// Handle syn-ack handshake
 	if err := doTeatimeServerHandshake(conn); err != nil {
 		conn.Close()
@@ -72,7 +83,7 @@ func handleConnection(sess *TTNetSession, conn *net.TCPConn) {
 /*
  * Runs continuous loop for listener to accept connections
  */
-func (this *TTNetSession) listenerAcceptLoop() {
+func (this *TestSession) listenerAcceptLoop() {
 	defer this.Listener.Close()
 
 	for {
@@ -91,7 +102,7 @@ func (this *TTNetSession) listenerAcceptLoop() {
  * Starts the listener. Setting `global` to `true` will allow connections to be
  * accepted from non-local addresses.
  */
-func (this *TTNetSession) StartListener(port int, global bool) error {
+func (this *TestSession) StartListener(port int, global bool) error {
 	if this.Listener != nil {
 		return errors.New("Listener: Already started")
 	}
@@ -114,4 +125,9 @@ func (this *TTNetSession) StartListener(port int, global bool) error {
 	this.Listener = listener
 	go this.listenerAcceptLoop()
 	return nil
+}
+
+func NewTestSession(repo *fs.Repo) *TestSession {
+	sess := NewTTNetSession(repo)
+	return &TestSession{sess, nil}
 }
