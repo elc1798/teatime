@@ -1,4 +1,4 @@
-package p2p
+package encode
 
 import (
 	json "encoding/json"
@@ -6,12 +6,6 @@ import (
 
 type changedFileList struct {
 	Filenames []string `json:"filenames"`
-}
-
-// Write interface for serializer
-type Serializer interface {
-	Serialize(v interface{}) ([]byte, error)
-	Deserialize([]byte) (interface{}, error)
 }
 
 type ChangedFileListSerializer struct{}

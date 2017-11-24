@@ -11,6 +11,7 @@ import (
 	"time"
 
 	tt "github.com/elc1798/teatime"
+	encode "github.com/elc1798/teatime/encode"
 )
 
 func (this *TTNetSession) sendTTPing(peerID string) error {
@@ -100,7 +101,7 @@ func (this *TTNetSession) startChangeNotifier(peerID string) {
 
 		log.Printf("Files changed: %v, err: %v", changedFiles, err)
 		if changedFiles != nil && len(changedFiles) > 0 {
-			s := ChangedFileListSerializer{}
+			s := encode.ChangedFileListSerializer{}
 			encoded, err := s.Serialize(changedFiles)
 			if err == nil {
 				tt.SendData(this.PeerConns[peerID], encoded)

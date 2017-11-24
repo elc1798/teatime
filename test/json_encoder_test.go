@@ -3,7 +3,7 @@ package test
 import (
 	"testing"
 
-	p2p "github.com/elc1798/teatime/p2p"
+	encoder "github.com/elc1798/teatime/encode"
 )
 
 func TestChangedFileListSerializer(t *testing.T) {
@@ -14,11 +14,11 @@ func TestChangedFileListSerializer(t *testing.T) {
 		"cs241 > ece391 lmao",
 	}
 
-	s1 := p2p.ChangedFileListSerializer{}
+	s1 := encoder.ChangedFileListSerializer{}
 
 	// Check if s1 actually inherits p2p.Serializer
 	var v1 interface{} = &s1
-	if _, ok := v1.(p2p.Serializer); !ok {
+	if _, ok := v1.(encoder.Serializer); !ok {
 		t.Fatalf("ChangedFileSerializer is not valid Serializer!")
 	}
 
