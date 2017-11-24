@@ -3,6 +3,7 @@ package teatime
 import (
 	"bufio"
 	"bytes"
+	"net"
 	"os"
 	"path"
 	"strings"
@@ -13,6 +14,7 @@ import (
 const TEATIME_TRACKED_DIR = ".tracked/"
 const TEATIME_BACKUP_DIR = ".backup/"
 const TEATIME_PEER_CACHE = "/peer_cache"
+const TEATIME_SOCKET_DIR = "/tmp/teatime/"
 
 var TEATIME_DEFAULT_HOME = path.Join(os.Getenv("HOME"), ".teatime/")
 
@@ -122,4 +124,27 @@ func WriteFileObjToPath(fileObj *File, path string) error {
 func ResetTeatime() error {
 	os.RemoveAll(TEATIME_DEFAULT_HOME)
 	return os.Mkdir(TEATIME_DEFAULT_HOME, 0755)
+}
+
+// TCP connection helpers
+
+/*
+ * Send specified data to the specified connection
+ *
+ * Returns the number of bytes sent, and an error if unsuccessful
+ */
+func SendData(conn *net.TCPConn, bytes []byte) (int, error) {
+	return conn.Write(bytes)
+}
+
+/*
+ * Reads data from the specified connection
+ *
+ * Returns a byte array containing the read data, number of bytes read and an
+ * error if unsuccessful
+ */
+func ReadData(conn *net.TCPConn) ([]byte, int, error) {
+	reply := make([]byte, 2048)
+	num_bytes, err := conn.Read(reply)
+	return reply, num_bytes, err
 }

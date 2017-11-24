@@ -72,16 +72,16 @@ func makeTCPConn(host string) (*net.TCPConn, error) {
  * Equivalent of `doTeatimeServerHandshake`, but from client's perspective
  */
 func doTeatimeClientHandshake(conn *net.TCPConn) error {
-	if _, err := SendData(conn, []byte(tt.TEATIME_NET_SYN)); err != nil {
+	if _, err := tt.SendData(conn, []byte(tt.TEATIME_NET_SYN)); err != nil {
 		return fmt.Errorf("Error sending syn [%v]", err)
 	}
 
 	conn.SetReadDeadline(time.Now().Add(time.Second * 2))
-	if serv_ack, _, err := ReadData(conn); err != nil || !tt.ByteArrayStringEquals(serv_ack, tt.TEATIME_NET_ACK) {
+	if serv_ack, _, err := tt.ReadData(conn); err != nil || !tt.ByteArrayStringEquals(serv_ack, tt.TEATIME_NET_ACK) {
 		return fmt.Errorf("Invalid teatime_ack [%v]", err)
 	}
 
-	if _, err := SendData(conn, []byte(tt.TEATIME_NET_SYNACK)); err != nil {
+	if _, err := tt.SendData(conn, []byte(tt.TEATIME_NET_SYNACK)); err != nil {
 		return fmt.Errorf("Error sending synack [%v]", err)
 	}
 

@@ -17,18 +17,18 @@ import (
 func doTeatimeServerHandshake(conn *net.TCPConn) error {
 	// Confirm syn
 	conn.SetReadDeadline(time.Now().Add(time.Second * 2)) // Stop read after 2 seconds
-	if remote_syn, _, err := ReadData(conn); err != nil || !tt.ByteArrayStringEquals(remote_syn, tt.TEATIME_NET_SYN) {
+	if remote_syn, _, err := tt.ReadData(conn); err != nil || !tt.ByteArrayStringEquals(remote_syn, tt.TEATIME_NET_SYN) {
 		return fmt.Errorf("Invalid teatime_syn [%v]", err)
 	}
 
 	// Send ack
-	if _, err := SendData(conn, []byte(tt.TEATIME_NET_ACK)); err != nil {
+	if _, err := tt.SendData(conn, []byte(tt.TEATIME_NET_ACK)); err != nil {
 		return fmt.Errorf("Error sending ack [%v]", err)
 	}
 
 	// Wait for syn-ack
 	conn.SetReadDeadline(time.Now().Add(time.Second * 2)) // Stop read after 2 seconds
-	if remote_synack, _, err := ReadData(conn); err != nil || !tt.ByteArrayStringEquals(remote_synack, tt.TEATIME_NET_SYNACK) {
+	if remote_synack, _, err := tt.ReadData(conn); err != nil || !tt.ByteArrayStringEquals(remote_synack, tt.TEATIME_NET_SYNACK) {
 		return fmt.Errorf("Invalid teatime_synack [%v]", err)
 	}
 

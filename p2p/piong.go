@@ -16,14 +16,14 @@ import (
 func (this *TTNetSession) sendTTPing(peerID string) error {
 	// Send "alive" signal to check if peer is up
 	this.NumPingsSent++
-	_, err := SendData(this.PeerConns[peerID], []byte(tt.TEATIME_ALIVE_PING))
+	_, err := tt.SendData(this.PeerConns[peerID], []byte(tt.TEATIME_ALIVE_PING))
 	return err
 }
 
 func (this *TTNetSession) sendTTPong(peerID string) error {
 	// Send "we gucci" signal to check if peer is up
 	this.NumPongsSent++
-	_, err := SendData(this.PeerConns[peerID], []byte(tt.TEATIME_GUCCI_PONG))
+	_, err := tt.SendData(this.PeerConns[peerID], []byte(tt.TEATIME_GUCCI_PONG))
 	return err
 }
 
@@ -31,7 +31,7 @@ func (this *TTNetSession) checkPeer(peerID string) bool {
 	this.sendTTPing(peerID)
 
 	this.PeerConns[peerID].SetReadDeadline(time.Now().Add(time.Second * 2))
-	if resp, _, err := ReadData(this.PeerConns[peerID]); err != nil || !tt.ByteArrayStringEquals(resp, tt.TEATIME_GUCCI_PONG) {
+	if resp, _, err := tt.ReadData(this.PeerConns[peerID]); err != nil || !tt.ByteArrayStringEquals(resp, tt.TEATIME_GUCCI_PONG) {
 		log.Printf("Check peer failed: err=%v, data=%v", err, string(resp))
 
 		// Close connection
@@ -50,7 +50,7 @@ func (this *TTNetSession) checkPeer(peerID string) bool {
 }
 
 func (this *TTNetSession) respondToData(peerID string) error {
-	if resp, _, err := ReadData(this.PeerConns[peerID]); err != nil {
+	if resp, _, err := tt.ReadData(this.PeerConns[peerID]); err != nil {
 		return err
 	} else {
 		if tt.ByteArrayStringEquals(resp, tt.TEATIME_ALIVE_PING) {
@@ -103,7 +103,7 @@ func (this *TTNetSession) startChangeNotifier(peerID string) {
 			s := ChangedFileListSerializer{}
 			encoded, err := s.Serialize(changedFiles)
 			if err == nil {
-				SendData(this.PeerConns[peerID], encoded)
+				tt.SendData(this.PeerConns[peerID], encoded)
 			}
 		}
 		<-ticker.C
