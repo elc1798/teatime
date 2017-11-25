@@ -2,57 +2,14 @@ package p2p
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
-	"strconv"
-	"strings"
 	"time"
 
 	tt "github.com/elc1798/teatime"
-	fs "github.com/elc1798/teatime/fs"
 )
 
-type Peer struct {
-	IP   string
-	Port int
-}
-
-type TTNetSession struct {
-	CAConn    *net.TCPConn            // Connection to central authority
-	PeerConns map[string]*net.TCPConn // List of peer connections
-	PeerList  map[string]Peer
-	Repo      *fs.Repo
-
-	// Counters
-	NumPingsSent int
-	NumPingsRcvd int
-	NumPongsSent int
-	NumPongsRcvd int
-}
-
 const CentralAuthorityHost = "tsukiumi.elc1798.tech:9001"
-
-/*
- * Creates and initializes a new Teatime Network Session
- */
-func NewTTNetSession(repo *fs.Repo) *TTNetSession {
-	newSession := new(TTNetSession)
-	newSession.Repo = repo
-	newSession.CAConn = nil
-	newSession.PeerConns = make(map[string]*net.TCPConn)
-	newSession.PeerList, _ = newSession.GetLocalPeerCache()
-	for _, peer := range newSession.PeerList {
-		_ = newSession.TryTeaTimeConn(fmt.Sprintf("%s:%d", peer.IP, peer.Port), time.Millisecond*250)
-	}
-
-	newSession.NumPingsSent = 0
-	newSession.NumPingsRcvd = 0
-	newSession.NumPongsSent = 0
-	newSession.NumPingsRcvd = 0
-
-	return newSession
-}
 
 /*
  * Generates a TCP connection
@@ -146,52 +103,6 @@ func (this *TTNetSession) TryTeaTimeConn(host string, pingInterval time.Duration
 	// go this.startChangeNotifier(key)
 
 	return nil
-}
-
-/*
- * Gets a list of peers from local cache
- */
-func (this *TTNetSession) GetLocalPeerCache() (map[string]Peer, error) {
-	peer_data, err := tt.ReadFile(this.Repo.GetPeerCacheFile())
-	if err != nil {
-		return nil, err
-	}
-
-	peer_list := make(map[string]Peer)
-	for _, peer_str := range peer_data {
-		trimmed := strings.TrimSpace(peer_str)
-		tokens := strings.Split(trimmed, ":")
-
-		if len(tokens) != 2 {
-			return nil, fmt.Errorf("Invalid peer: '%v'", trimmed)
-		}
-
-		port, err := strconv.Atoi(tokens[1])
-		if err != nil {
-			return nil, fmt.Errorf("Invalid peer: '%v'", trimmed)
-		}
-		peer_list[trimmed] = Peer{
-			IP:   tokens[0],
-			Port: port,
-		}
-	}
-
-	return peer_list, nil
-}
-
-func (this *TTNetSession) GenerateLocalPeerCache() error {
-	// Generate string list from peers
-	string_list := make([]string, 0)
-	for _, peer := range this.PeerList {
-		string_list = append(string_list, fmt.Sprintf("%s:%d", peer.IP, peer.Port))
-	}
-
-	// Write to file
-	return ioutil.WriteFile(
-		this.Repo.GetPeerCacheFile(),
-		[]byte(strings.Join(string_list, "\n")),
-		0644,
-	)
 }
 
 /*
