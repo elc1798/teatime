@@ -15,10 +15,11 @@ const TEATIME_TRACKED_DIR = ".tracked/"
 const TEATIME_BACKUP_DIR = ".backup/"
 const TEATIME_PEER_CACHE = "/peer_cache"
 const TEATIME_SOCKET_DIR = "/tmp/teatime/"
+const TEATIME_DIR_ROOT_STORE = "/dir_root"
 
 var TEATIME_DEFAULT_HOME = path.Join(os.Getenv("HOME"), ".teatime/")
 
-const TEATIME_DIR_ROOT_STORE = "/dir_root"
+const TEATIME_DEFAULT_PORT = 12345
 
 const TEATIME_NET_SYN = "teatime_syn"
 const TEATIME_NET_ACK = "teatime_ack"

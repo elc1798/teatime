@@ -1,17 +1,14 @@
 package main
 
 import (
-	"github.com/elc1798/teatime/crumpet"
-	"github.com/elc1798/teatime/fs"
-	"github.com/elc1798/teatime/p2p"
-	"github.com/urfave/cli"
-	"os"
-	//tt "github.com/elc1798/teatime"
-	//dmp "github.com/sergi/go-diff/diffmatchpatch"
 	"fmt"
+	"os"
 	"path"
 	"sort"
-	"time"
+
+	"github.com/urfave/cli"
+
+	fs "github.com/elc1798/teatime/fs"
 )
 
 func main() {
@@ -23,28 +20,36 @@ func main() {
 		return nil
 	}
 	app.Commands = []cli.Command{
-		{Name: "init",
+		{
+			Name: "init",
 			Action: func(c *cli.Context) error {
-				wd, _ := os.Getwd()
-				host := c.Args().Get(0)
-				repo, _ := fs.InitRepo(host, wd)
+				// TODO: Uncomment this and fix the rest
+				/*
+					wd, _ := os.Getwd()
+					host := c.Args().Get(0)
+					repo, _ := fs.InitRepo(host, wd)
+				*/
 
+				/* Obsolete with crumpet changes
 				serverSession := p2p.NewTTNetSession(repo)
 				port := 2345
 				serverSession.StartListener(port, true)
 				if c.Args().Get(1) != "" {
 					serverSession.TryTeaTimeConn(fmt.Sprintf("%s:%d", host, port), time.Millisecond*250)
 				}
+				*/
 				return nil
 			},
 		},
-		{Name: "start",
+		{
+			Name: "start",
 			Action: func(c *cli.Context) error {
-				crumpet.Start()
+				// TODO: Finish Crumpet first. Then call whatever methods
 				return nil
 			},
 		},
-		{Name: "track",
+		{
+			Name: "track",
 			Action: func(c *cli.Context) error {
 				wd, _ := os.Getwd()
 				repoName := c.Args().Get(0)
@@ -63,6 +68,7 @@ func main() {
 			},
 		},
 	}
+
 	sort.Sort(cli.CommandsByName(app.Commands))
 	app.Run(os.Args)
 }

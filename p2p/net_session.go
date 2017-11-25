@@ -19,10 +19,11 @@ type Peer struct {
 }
 
 type TTNetSession struct {
-	CAConn    *net.TCPConn            // Connection to central authority
-	PeerConns map[string]*net.TCPConn // List of peer connections
-	PeerList  map[string]Peer
-	Repo      *fs.Repo
+	CAConn         *net.TCPConn            // Connection to central authority
+	PeerConns      map[string]*net.TCPConn // List of peer connections
+	PeerList       map[string]Peer
+	Repo           *fs.Repo
+	CrumpetWatcher *net.UnixConn // Unix Domain Socket for Crumpet communication
 
 	// Counters
 	NumPingsSent int
