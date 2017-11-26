@@ -5,6 +5,7 @@ import (
 	"errors"
 )
 
+const ACTION_CONNECT = "tt_conn_request"
 const ACTION_PING = "ping"
 const ACTION_FILE_LIST = "changed_f_list"
 const ACTION_DELTAS = "deltas"
@@ -19,6 +20,8 @@ type InterTeatimeSerializer struct{}
 
 func serializerFromAction(action string) (Serializer, error) {
 	switch action {
+	case ACTION_CONNECT:
+		return &ConnectionRequestSerializer{}, nil
 	case ACTION_PING:
 		return &PingSerializer{}, nil
 	case ACTION_FILE_LIST:
@@ -77,21 +80,8 @@ func (this *InterTeatimeSerializer) Deserialize(v []byte) (interface{}, error) {
 		return nil, err
 	}
 
-	// Cast the interface{} to desired struct for convenience. If any of these
-	// errors, our program shouldn't be running anyway, so no errors are caught
-	switch pack.Action {
-	case ACTION_PING:
-		newMessage.Payload = payload.(PingPayload)
-		break
-	case ACTION_FILE_LIST:
-		newMessage.Payload = payload.(ChangedFileListPayload)
-		break
-	case ACTION_DELTAS:
-		newMessage.Payload = payload.(FileDeltasPayload)
-		break
-	default:
-		return nil, errors.New("Invalid action received!")
-	}
+	newMessage.Payload = payload
+
 	return newMessage, nil
 }
 
@@ -115,3 +105,5 @@ type FileDeltasPayload struct {
 	RevisionID int               `json:"revision_id"`
 	Deltas     map[string]string `json:"deltas"`
 }
+
+type ConnectionRequestPayload string // This shouldn't be anything

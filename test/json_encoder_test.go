@@ -1,10 +1,48 @@
 package test
 
 import (
+	"reflect"
 	"testing"
 
 	encoder "github.com/elc1798/teatime/encode"
 )
+
+func testEncodeDecode(s, input interface{}, t *testing.T) interface{} {
+	var serializer encoder.Serializer
+
+	serializer, ok := s.(encoder.Serializer)
+	if !ok {
+		t.Fatalf("Invalid serializer! Type: %v", reflect.TypeOf(s))
+	}
+
+	encoded, err := serializer.Serialize(input)
+	if err != nil {
+		t.Fatalf("Failed to encode! error='%v'", err)
+	}
+
+	t.Logf("Serialized: %v", string(encoded))
+
+	// Deserialize and return
+	decoded_obj, err := serializer.Deserialize(encoded)
+	if err != nil {
+		t.Fatalf("Failed to decode! error='%v'", err)
+	}
+	t.Logf("Decoded: %v", decoded_obj)
+
+	return decoded_obj
+}
+
+func TestConnectRequestSerializer(t *testing.T) {
+	s1 := encoder.ConnectionRequestSerializer{}
+	x1 := encoder.ConnectionRequestPayload("abc")
+
+	decoded_obj := testEncodeDecode(&s1, x1, t)
+	decoded := decoded_obj.(encoder.ConnectionRequestPayload)
+
+	if x1 != decoded {
+		t.Fatalf("Decoded != Encoded")
+	}
+}
 
 func TestChangedFileListSerializer(t *testing.T) {
 	filenames := []string{
@@ -15,29 +53,13 @@ func TestChangedFileListSerializer(t *testing.T) {
 	}
 
 	s1 := encoder.ChangedFileListSerializer{}
-
-	// Check if s1 actually inherits Serializer
-	var v1 interface{} = &s1
-	if _, ok := v1.(encoder.Serializer); !ok {
-		t.Fatalf("ChangedFileSerializer is not valid Serializer!")
-	}
-
-	encoded, err := s1.Serialize(encoder.ChangedFileListPayload{
+	x1 := encoder.ChangedFileListPayload{
 		Filenames: filenames,
-	})
-	if err != nil {
-		t.Fatalf("Failed to encode! error='%v'", err)
-	}
-	t.Logf("Json: %v", string(encoded))
-
-	// Deserialize and check equality
-	decoded_obj, err := s1.Deserialize(encoded)
-	if err != nil {
-		t.Fatalf("Failed to decode! error='%v'", err)
 	}
 
+	decoded_obj := testEncodeDecode(&s1, x1, t)
 	decoded := decoded_obj.(encoder.ChangedFileListPayload).Filenames
-	t.Logf("Decoded: %v", decoded)
+
 	if len(filenames) != len(decoded) {
 		t.Fatalf("Decoding error, length mismatch. Expected '%v', got '%v'", len(filenames), len(decoded))
 	}
@@ -51,31 +73,14 @@ func TestChangedFileListSerializer(t *testing.T) {
 
 func TestPingSerializer(t *testing.T) {
 	s1 := encoder.PingSerializer{}
-
-	// Check if s1 actually inherits Serializer
-	var v1 interface{} = &s1
-	if _, ok := v1.(encoder.Serializer); !ok {
-		t.Fatalf("PingSerializer is not valid Serializer!")
-	}
-
-	encoded, err := s1.Serialize(encoder.PingPayload{
+	x1 := encoder.PingPayload{
 		PingID:         0,
 		CurrentRetries: 17,
 		IsPong:         false,
-	})
-	if err != nil {
-		t.Fatalf("Failed to encode! error='%v'", err)
-	}
-	t.Logf("Json: %v", string(encoded))
-
-	// Deserialize and check equality
-	decoded_obj, err := s1.Deserialize(encoded)
-	if err != nil {
-		t.Fatalf("Failed to decode! error='%v'", err)
 	}
 
+	decoded_obj := testEncodeDecode(&s1, x1, t)
 	decoded := decoded_obj.(encoder.PingPayload)
-	t.Logf("Decoded: %v", decoded)
 
 	if decoded.PingID != 0 || decoded.CurrentRetries != 17 || decoded.IsPong != false {
 		t.Fatalf("Decoding error!")
@@ -84,33 +89,16 @@ func TestPingSerializer(t *testing.T) {
 
 func TestFileDeltasSerializer(t *testing.T) {
 	s1 := encoder.FileDeltasSerializer{}
-
-	// Check if s1 actually inherits Serializer
-	var v1 interface{} = &s1
-	if _, ok := v1.(encoder.Serializer); !ok {
-		t.Fatalf("FileDeltasSerializer is not valid Serializer!")
-	}
-
-	encoded, err := s1.Serialize(encoder.FileDeltasPayload{
+	x1 := encoder.FileDeltasPayload{
 		RevisionID: 12,
 		Deltas: map[string]string{
 			"fake_file.txt":   "idk what a diff string looks like",
 			"other_file.lmao": "xd kappa",
 		},
-	})
-	if err != nil {
-		t.Fatalf("Failed to encode! error='%v'", err)
-	}
-	t.Logf("Json: %v", string(encoded))
-
-	// Deserialize and check equality
-	decoded_obj, err := s1.Deserialize(encoded)
-	if err != nil {
-		t.Fatalf("Failed to decode! error='%v'", err)
 	}
 
+	decoded_obj := testEncodeDecode(&s1, x1, t)
 	decoded := decoded_obj.(encoder.FileDeltasPayload)
-	t.Logf("Decoded: %v", decoded)
 
 	if decoded.RevisionID != 12 || len(decoded.Deltas) != 2 || decoded.Deltas["fake_file.txt"] != "idk what a diff string looks like" ||
 		decoded.Deltas["other_file.lmao"] != "xd kappa" {
@@ -120,13 +108,6 @@ func TestFileDeltasSerializer(t *testing.T) {
 
 func TestInterTeatimeSerializer(t *testing.T) {
 	s1 := encoder.InterTeatimeSerializer{}
-
-	// Check if s1 actually inherits Serializer
-	var v1 interface{} = &s1
-	if _, ok := v1.(encoder.Serializer); !ok {
-		t.Fatalf("InterTeatimeSerializer is not valid Serializer!")
-	}
-
 	x1 := encoder.TeatimeMessage{
 		Recipient: "repo1",
 		Action:    encoder.ACTION_PING,
@@ -137,20 +118,8 @@ func TestInterTeatimeSerializer(t *testing.T) {
 		},
 	}
 
-	encoded, err := s1.Serialize(x1)
-	if err != nil {
-		t.Fatalf("Failed to encode! error='%v'", err)
-	}
-	t.Logf("Json: %v", string(encoded))
-
-	// Deserialize and check equality
-	decoded_obj, err := s1.Deserialize(encoded)
-	if err != nil {
-		t.Fatalf("Failed to decode! error='%v'", err)
-	}
-
+	decoded_obj := testEncodeDecode(&s1, x1, t)
 	decoded := decoded_obj.(encoder.TeatimeMessage)
-	t.Logf("Decoded: %v", decoded)
 
 	if decoded.Recipient != x1.Recipient || decoded.Action != x1.Action {
 		t.Fatalf("Decoding error!")
