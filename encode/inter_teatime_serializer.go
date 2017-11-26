@@ -69,6 +69,7 @@ func (this *InterTeatimeSerializer) Deserialize(v []byte) (interface{}, error) {
 		payloadSerializer = &ChangedFileListSerializer{}
 		break
 	case ACTION_DELTAS:
+		payloadSerializer = &FileDeltasSerializer{}
 		break
 	default:
 		return nil, errors.New("Invalid action received!")
