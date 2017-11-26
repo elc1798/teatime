@@ -19,6 +19,7 @@ import (
 
 type TestSession struct {
 	*TTNetSession
+
 	Listener *net.TCPListener
 }
 

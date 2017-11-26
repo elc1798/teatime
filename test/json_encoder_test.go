@@ -117,3 +117,48 @@ func TestFileDeltasSerializer(t *testing.T) {
 		t.Fatalf("Decoding error!")
 	}
 }
+
+func TestInterTeatimeSerializer(t *testing.T) {
+	s1 := encoder.InterTeatimeSerializer{}
+
+	// Check if s1 actually inherits Serializer
+	var v1 interface{} = &s1
+	if _, ok := v1.(encoder.Serializer); !ok {
+		t.Fatalf("InterTeatimeSerializer is not valid Serializer!")
+	}
+
+	x1 := encoder.TeatimeMessage{
+		Recipient: "repo1",
+		Action:    encoder.ACTION_PING,
+		Payload: encoder.PingPayload{
+			PingID:         0,
+			CurrentRetries: 1,
+			IsPong:         true,
+		},
+	}
+
+	encoded, err := s1.Serialize(x1)
+	if err != nil {
+		t.Fatalf("Failed to encode! error='%v'", err)
+	}
+	t.Logf("Json: %v", string(encoded))
+
+	// Deserialize and check equality
+	decoded_obj, err := s1.Deserialize(encoded)
+	if err != nil {
+		t.Fatalf("Failed to decode! error='%v'", err)
+	}
+
+	decoded := decoded_obj.(encoder.TeatimeMessage)
+	t.Logf("Decoded: %v", decoded)
+
+	if decoded.Recipient != x1.Recipient || decoded.Action != x1.Action {
+		t.Fatalf("Decoding error!")
+	}
+
+	y1 := decoded.Payload.(encoder.PingPayload)
+	z1 := x1.Payload.(encoder.PingPayload)
+	if y1.PingID != z1.PingID || y1.CurrentRetries != z1.CurrentRetries || y1.IsPong != z1.IsPong {
+		t.Fatalf("Decoding error!")
+	}
+}

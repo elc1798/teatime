@@ -17,32 +17,40 @@ type routedPackage struct {
 
 type InterTeatimeSerializer struct{}
 
-/*
- * v must be a map[string]string with "Destination", "Action", and "Data" as
- * keys. If any keys are missing, a "Bad Payload" error is returned. If v is not
- * of type map[string]string, a "Invalid Payload Type" error is returned.
- */
+func serializerFromAction(action string) (Serializer, error) {
+	switch action {
+	case ACTION_PING:
+		return &PingSerializer{}, nil
+	case ACTION_FILE_LIST:
+		return &ChangedFileListSerializer{}, nil
+	case ACTION_DELTAS:
+		return &FileDeltasSerializer{}, nil
+	default:
+		return nil, errors.New("Invalid action received!")
+	}
+}
+
 func (this *InterTeatimeSerializer) Serialize(v interface{}) ([]byte, error) {
-	dict, ok := v.(map[string]string)
+	obj, ok := v.(TeatimeMessage)
 	if !ok {
-		return nil, errors.New("Invalid Payload Type")
+		return nil, errors.New("Invalid input")
 	}
 
-	checkKey := func(d map[string]string, k string) bool {
-		_, ok := d[k]
-		return ok
+	// Serialize "Data" based on action type
+	payloadSerializer, err := serializerFromAction(obj.Action)
+	if err != nil {
+		return nil, err
 	}
 
-	for _, v := range []string{"Destination", "Action", "Data"} {
-		if !checkKey(dict, v) {
-			return nil, errors.New("Bad Payload")
-		}
+	data, err := payloadSerializer.Serialize(obj.Payload)
+	if err != nil {
+		return nil, err
 	}
 
 	return json.Marshal(routedPackage{
-		Destination: dict["Destination"],
-		Action:      dict["Action"],
-		Data:        dict["Data"],
+		Destination: obj.Recipient,
+		Action:      obj.Action,
+		Data:        string(data),
 	})
 }
 
@@ -59,20 +67,9 @@ func (this *InterTeatimeSerializer) Deserialize(v []byte) (interface{}, error) {
 	}
 
 	// Deserialize "Data" based on action type
-	var payloadSerializer Serializer
-
-	switch pack.Action {
-	case ACTION_PING:
-		payloadSerializer = &PingSerializer{}
-		break
-	case ACTION_FILE_LIST:
-		payloadSerializer = &ChangedFileListSerializer{}
-		break
-	case ACTION_DELTAS:
-		payloadSerializer = &FileDeltasSerializer{}
-		break
-	default:
-		return nil, errors.New("Invalid action received!")
+	payloadSerializer, err := serializerFromAction(pack.Action)
+	if err != nil {
+		return nil, err
 	}
 
 	payload, err := payloadSerializer.Deserialize([]byte(pack.Data))
