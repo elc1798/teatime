@@ -17,7 +17,12 @@ type CrumpetDaemon struct {
 	Listener             *net.TCPListener
 }
 
-func (this *CrumpetDaemon) Start() {
+func (this *CrumpetDaemon) Start(global bool) {
+	if err := this.initFields(); err != nil {
+		log.Fatalf("Failure initializing Crumpet: %v", err)
+	}
+
+	this.StartListener(global)
 }
 
 func (this *CrumpetDaemon) initFields() error {
@@ -27,7 +32,7 @@ func (this *CrumpetDaemon) initFields() error {
 	}
 
 	if err := this.setUpRepoSocketMap(); err != nil {
-		log.Fatalf("Crumpet: Error setting up sockets: %v", err)
+		return err
 	}
 	this.Listener = nil
 
@@ -52,8 +57,16 @@ func (this *CrumpetDaemon) setUpRepoSocketMap() error {
 		}
 
 		waitChan := make(chan bool)
+		go func() {
+			<-waitChan
+
+			log.Printf("Repo '%v' connected to Crumpet!", repo.Name)
+		}()
+
 		go this.waitForNetSession(listener, repo, waitChan)
 		this.impendingConnections[repo.Name] = waitChan
+
+		// TODO: Start TTNetSession here
 	}
 
 	return nil
