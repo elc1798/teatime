@@ -102,7 +102,7 @@ func (this *TTNetSession) startChangeNotifier(peerID string) {
 		log.Printf("Files changed: %v, err: %v", changedFiles, err)
 		if changedFiles != nil && len(changedFiles) > 0 {
 			s := encode.ChangedFileListSerializer{}
-			encoded, err := s.Serialize(changedFiles)
+			encoded, err := s.Serialize(encode.ChangedFileListPayload{Filenames: changedFiles})
 			if err == nil {
 				tt.SendData(this.PeerConns[peerID], encoded)
 			}

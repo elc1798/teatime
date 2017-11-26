@@ -2,25 +2,24 @@ package encode
 
 import (
 	json "encoding/json"
+	"errors"
 )
-
-type changedFileList struct {
-	Filenames []string `json:"filenames"`
-}
 
 type ChangedFileListSerializer struct{}
 
 func (this *ChangedFileListSerializer) Serialize(v interface{}) ([]byte, error) {
-	list := v.([]string)
-	data := changedFileList{Filenames: list}
-	return json.Marshal(data)
+	obj, ok := v.(ChangedFileListPayload)
+	if !ok {
+		return nil, errors.New("Invalid input")
+	}
+	return json.Marshal(obj)
 }
 
 func (this *ChangedFileListSerializer) Deserialize(v []byte) (interface{}, error) {
-	var data changedFileList
+	var data ChangedFileListPayload
 	if err := json.Unmarshal(v, &data); err != nil {
 		return nil, err
 	}
 
-	return data.Filenames, nil
+	return data, nil
 }
