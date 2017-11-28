@@ -7,6 +7,7 @@ import (
 	tt "github.com/elc1798/teatime"
 	dmp "github.com/sergi/go-diff/diffmatchpatch"
 	"io"
+	"strings"
 )
 
 func fileHash(f tt.File) []byte {
@@ -38,7 +39,87 @@ func ApplyDiff(basefile tt.File, delta string) tt.File {
 	return newfile
 }
 
-//Not sure what to do here...
-func HandleMergeConflicts(basefile tt.File, d1 []dmp.Diff, d2 []dmp.Diff) tt.File {
-	return tt.File{}
+func chooseDiff(diff1 dmp.Diff, diff2 dmp.Diff) dmp.Diff {
+	if diff1.Type == 0 {
+		return diff2
+	}
+	return diff1
+}
+func HandleMergeConflicts(basefile tt.File, delta1 string, delta2 string) tt.File {
+	d := dmp.New()
+	var newDiffs []dmp.Diff
+	diffs1, _ := d.DiffFromDelta(basefile.ToString(), delta1)
+	diffs2, _ := d.DiffFromDelta(basefile.ToString(), delta2)
+
+	for index1, index2 := 0, 0; index1 < len(diffs1) || index2 < len(diffs2); {
+		diff1 := diffs1[index1]
+		diff2 := diffs2[index2]
+		if len(diffs1) == index1 {
+			newDiffs = append(newDiffs, diff2)
+			index2++
+			continue
+		}
+		if len(diffs2) == index2 {
+			newDiffs = append(newDiffs, diff1)
+			index1++
+			continue
+		}
+		if diff1.Text == diff2.Text {
+			newDiffs = append(newDiffs, chooseDiff(diff1, diff2))
+			index1++
+			index2++
+			continue
+		}
+		if strings.HasSuffix(diff1.Text, diff2.Text) && diff1.Type != 1 {
+			newDiffs = append(newDiffs, diff2)
+			index1++
+			index2++
+			continue
+		}
+		if strings.HasSuffix(diff2.Text, diff1.Text) && diff2.Type != 1 {
+			newDiffs = append(newDiffs, diff1)
+			index1++
+			index2++
+			continue
+		}
+		if strings.Contains(diff1.Text, diff2.Text) && diff1.Type != 1 {
+			newDiffs = append(newDiffs, diff2)
+			index2++
+			continue
+		}
+		if strings.Contains(diff2.Text, diff1.Text) && diff2.Type != 1 {
+			newDiffs = append(newDiffs, diff1)
+			index1++
+			continue
+		}
+
+		if strings.HasSuffix(diff1.Text, diff2.Text) && diff1.Type == 1 {
+			newDiffs = append(newDiffs, diff1)
+			index1++
+			index2++
+			continue
+		}
+		if strings.HasSuffix(diff2.Text, diff1.Text) && diff2.Type == 1 {
+			newDiffs = append(newDiffs, diff2)
+			index1++
+			index2++
+			continue
+		}
+		if strings.Contains(diff1.Text, diff2.Text) && diff1.Type == 1 {
+			index2++
+			continue
+		}
+		if strings.Contains(diff2.Text, diff1.Text) && diff2.Type == 1 {
+			index1++
+			continue
+		}
+		newDiffs = append(newDiffs, diff1) //TODO THIS IS ARBITRARY FOR NOW
+		newDiffs = append(newDiffs, diff2)
+		index1++
+		index2++
+	}
+	newfileString := d.DiffText2(newDiffs)
+	newfile := tt.File{}
+	newfile.FromString(newfileString)
+	return newfile
 }

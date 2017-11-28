@@ -40,3 +40,15 @@ func TestDiff(t *testing.T) {
 	fmt.Println(d)
 	assert.Equal(t, file2, diff.ApplyDiff(file1, d), "Diff was incorrect")
 }
+
+func TestHandleMergeConflicts(t *testing.T) {
+	file1 := tt.File{}
+	file2 := tt.File{}
+	file3 := tt.File{}
+	file1.AppendLine("Lorem ipsum dolor.")
+	file2.AppendLine("Lorem dolor sit amet.")
+	file3.AppendLine("Lorem ipsum amet.")
+	d1 := diff.CreateDiff(file1, file2)
+	d2 := diff.CreateDiff(file1, file3)
+	fmt.Println(diff.HandleMergeConflicts(file1, d1, d2))
+}
