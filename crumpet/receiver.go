@@ -53,59 +53,45 @@ func (this *CrumpetDaemon) listenerAcceptLoop() {
 
 func (this *CrumpetDaemon) handleConnection(conn *net.TCPConn) {
 	// Do Teatime handshake
-	desiredRepo, err := waitForConnectionRequest(conn)
+	msg, err := waitForConnectionRequest(conn)
 	if err != nil {
 		conn.Close()
 		log.Printf("Crumpet.Listener: HandshakeError->(%v)", err)
 		return
 	}
 
-	// Check if Repo is connected
-	if _, ok := this.repoSockets[desiredRepo]; !ok {
+	if err2 := this.handleActionConnReq(conn, msg); err2 != nil {
 		conn.Close()
-		log.Printf("Crumpet.Listener: Repo '%v' not connected to Crumpet!", desiredRepo)
+		log.Printf("Crumpet.Listener: ConnectionRequestError->(%v)", err2)
 		return
 	}
 
-	// Get connection host
-	host := conn.RemoteAddr().String()
-	tcpAddr, _ := net.ResolveTCPAddr("tcp", host)
-	log.Printf("Crumpet.Listener: NewPeerConnection->(%v -> %v)", tcpAddr.IP, desiredRepo)
-
-	// Serialize the IP of the peer and relay to appropriate TTNetSession
-	serializer := encoder.InterTeatimeSerializer{}
-	connectionInfo := encoder.TeatimeMessage{
-		Recipient: desiredRepo,
-		Action:    encoder.ACTION_CONNECT,
-		Payload:   encoder.ConnectionRequestPayload(tcpAddr.IP),
-	}
-
-	// This really should not error...
-	encoded, _ := serializer.Serialize(connectionInfo)
-	this.repoSockets[desiredRepo].Write(encoded)
+	// Start Delegator
+	go this.StartDelegator(conn)
 }
 
-func waitForConnectionRequest(conn *net.TCPConn) (string, error) {
+func waitForConnectionRequest(conn *net.TCPConn) (encoder.TeatimeMessage, error) {
 	conn.SetReadDeadline(time.Now().Add(time.Second * 2))
 	data, _, err := tt.ReadData(conn)
 	if err != nil {
-		return "", err
+		return encoder.TeatimeMessage{}, err
 	}
 
 	serializer := encoder.InterTeatimeSerializer{}
 	decoded_obj, err := serializer.Deserialize(data)
+	// log.Printf("%v, %v", string(data), decoded_obj)
 	if err != nil {
-		return "", err
+		return encoder.TeatimeMessage{}, err
 	}
 
 	decoded, ok := decoded_obj.(encoder.TeatimeMessage)
 	if !ok {
-		return "", errors.New("Invalid TeatimeMessage")
+		return encoder.TeatimeMessage{}, errors.New("Invalid TeatimeMessage")
 	}
 
 	if decoded.Action != encoder.ACTION_CONNECT {
-		return "", errors.New("Not a connection attempt")
+		return encoder.TeatimeMessage{}, errors.New("Not a connection attempt")
 	}
 
-	return decoded.Recipient, nil
+	return decoded, nil
 }

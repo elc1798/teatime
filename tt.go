@@ -3,6 +3,7 @@ package teatime
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"net"
 	"os"
 	"path"
@@ -20,13 +21,6 @@ const TEATIME_DIR_ROOT_STORE = "/dir_root"
 var TEATIME_DEFAULT_HOME = path.Join(os.Getenv("HOME"), ".teatime/")
 
 const TEATIME_DEFAULT_PORT = 12345
-
-const TEATIME_NET_SYN = "teatime_syn"
-const TEATIME_NET_ACK = "teatime_ack"
-const TEATIME_NET_SYNACK = "teatime_synack"
-
-const TEATIME_ALIVE_PING = "tt_alive?"
-const TEATIME_GUCCI_PONG = "tt_we_gucci"
 
 // Utils
 func ReadFile(path string) ([]string, error) {
@@ -122,8 +116,13 @@ func WriteFileObjToPath(fileObj *File, path string) error {
 	return err
 }
 
+func GetSocketPath(repoName string) string {
+	return path.Join(TEATIME_SOCKET_DIR, fmt.Sprintf("%v.sock", repoName))
+}
+
 func ResetTeatime() error {
 	os.RemoveAll(TEATIME_DEFAULT_HOME)
+	os.RemoveAll(TEATIME_SOCKET_DIR)
 	return os.Mkdir(TEATIME_DEFAULT_HOME, 0755)
 }
 
@@ -135,7 +134,7 @@ func ResetTeatime() error {
  * Returns the number of bytes sent, and an error if unsuccessful
  */
 func SendData(conn *net.TCPConn, bytes []byte) (int, error) {
-	return conn.Write(bytes)
+	return conn.Write(append(bytes, byte(0)))
 }
 
 /*
@@ -145,7 +144,24 @@ func SendData(conn *net.TCPConn, bytes []byte) (int, error) {
  * error if unsuccessful
  */
 func ReadData(conn *net.TCPConn) ([]byte, int, error) {
-	reply := make([]byte, 2048)
-	num_bytes, err := conn.Read(reply)
-	return reply, num_bytes, err
+	full_reply := make([]byte, 0)
+	reply := make([]byte, 1)
+	reply[0] = byte(1) // Doesn't matter as long as it's not 0
+	for {
+		num_bytes, err := conn.Read(reply)
+		if err != nil {
+			return full_reply, len(full_reply), err
+		}
+
+		if num_bytes != 1 {
+			continue
+		}
+
+		if reply[0] == byte(0) {
+			break
+		}
+
+		full_reply = append(full_reply, reply[0])
+	}
+	return full_reply, len(full_reply), nil
 }

@@ -6,7 +6,6 @@ import (
 	"log"
 	"net"
 	"strings"
-	"time"
 
 	tt "github.com/elc1798/teatime"
 	encoder "github.com/elc1798/teatime/encode"
@@ -14,8 +13,9 @@ import (
 )
 
 type Peer struct {
-	IP   string `json:"IP"`
-	Port int    `json:"Port"`
+	IP             string `json:"IP"`
+	Port           int    `json:"Port"`
+	RepoRemoteName string `json:"RepoRemoteName"`
 }
 
 type TTNetSession struct {
@@ -42,16 +42,39 @@ func NewTTNetSession(repo *fs.Repo) *TTNetSession {
 	newSession.Repo = repo
 	newSession.CAConn = nil
 	newSession.PeerConns = make(map[string]*net.TCPConn)
+	newSession.PeerList = make(map[string]Peer)
+
+	// Connect to Crumpet. Return nil if failed.
+	if err := newSession.startCrumpetWatcher(); err != nil {
+		return nil
+	}
+
+	// Spawn new connections based on PeerCache
 	p_list, err := newSession.GetLocalPeerCache()
 	if err != nil {
 		log.Printf("NewTTNetSession: Error in GetLocalPeerCache->[ %v ]", err)
 		p_list = make(map[string]Peer)
 	}
-	newSession.PeerList = p_list
-
-	for _, peer := range newSession.PeerList {
-		_ = newSession.TryTeaTimeConn(fmt.Sprintf("%s:%d", peer.IP, peer.Port), time.Millisecond*250)
+	for _, peer := range p_list {
+		newSession.TryTeaTimeConn(fmt.Sprintf("%s:%d", peer.IP, peer.Port), peer.RepoRemoteName)
 	}
+	// Do not immediately add to peer list. If peer is up, they will respond
+	// with connect request, and we will add it to list then.
+
+	newSession.NumPingsSent = 0
+	newSession.NumPingsRcvd = 0
+	newSession.NumPongsSent = 0
+	newSession.NumPingsRcvd = 0
+
+	return newSession
+}
+
+func NewTestTTNetSession(repo *fs.Repo) *TTNetSession {
+	newSession := new(TTNetSession)
+	newSession.Repo = repo
+	newSession.CAConn = nil
+	newSession.PeerConns = make(map[string]*net.TCPConn)
+	newSession.PeerList = make(map[string]Peer)
 
 	newSession.NumPingsSent = 0
 	newSession.NumPingsRcvd = 0
@@ -80,8 +103,9 @@ func (this *TTNetSession) GetLocalPeerCache() (map[string]Peer, error) {
 	for k, v := range generic_obj.(map[string]interface{}) {
 		p := v.(map[string]interface{})
 		peer_list[k] = Peer{
-			IP:   p["IP"].(string),
-			Port: int(p["Port"].(float64)),
+			IP:             p["IP"].(string),
+			Port:           int(p["Port"].(float64)),
+			RepoRemoteName: p["RepoRemoteName"].(string),
 		}
 	}
 

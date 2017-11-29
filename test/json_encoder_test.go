@@ -34,12 +34,15 @@ func testEncodeDecode(s, input interface{}, t *testing.T) interface{} {
 
 func TestConnectRequestSerializer(t *testing.T) {
 	s1 := encoder.ConnectionRequestSerializer{}
-	x1 := encoder.ConnectionRequestPayload("abc")
+	x1 := encoder.ConnectionRequestPayload{
+		OriginIP:       "0.0.0.0",
+		RepoRemoteName: "bob",
+	}
 
 	decoded_obj := testEncodeDecode(&s1, x1, t)
 	decoded := decoded_obj.(encoder.ConnectionRequestPayload)
 
-	if x1 != decoded {
+	if x1.OriginIP != decoded.OriginIP || x1.RepoRemoteName != decoded.RepoRemoteName {
 		t.Fatalf("Decoded != Encoded")
 	}
 }

@@ -11,70 +11,59 @@ import (
 	"time"
 
 	tt "github.com/elc1798/teatime"
-	encode "github.com/elc1798/teatime/encode"
+	encoder "github.com/elc1798/teatime/encode"
 )
 
 func (this *TTNetSession) sendTTPing(peerID string) error {
-	// Send "alive" signal to check if peer is up
-	this.NumPingsSent++
-	_, err := tt.SendData(this.PeerConns[peerID], []byte(tt.TEATIME_ALIVE_PING))
-	return err
-}
-
-func (this *TTNetSession) sendTTPong(peerID string) error {
-	// Send "we gucci" signal to check if peer is up
-	this.NumPongsSent++
-	_, err := tt.SendData(this.PeerConns[peerID], []byte(tt.TEATIME_GUCCI_PONG))
-	return err
-}
-
-func (this *TTNetSession) checkPeer(peerID string) bool {
-	this.sendTTPing(peerID)
-
-	this.PeerConns[peerID].SetReadDeadline(time.Now().Add(time.Second * 2))
-	if resp, _, err := tt.ReadData(this.PeerConns[peerID]); err != nil || !tt.ByteArrayStringEquals(resp, tt.TEATIME_GUCCI_PONG) {
-		log.Printf("Check peer failed: err=%v, data=%v", err, string(resp))
-
-		// Close connection
-		this.PeerConns[peerID].Close()
-
-		// Remove peer
-		delete(this.PeerConns, peerID)
-		delete(this.PeerList, peerID)
-
-		return false
-	} else {
-		this.NumPongsRcvd++
-
-		return true
+	msg := encoder.TeatimeMessage{
+		Recipient: this.PeerList[peerID].RepoRemoteName,
+		Action:    encoder.ACTION_PING,
+		Payload: encoder.PingPayload{
+			PingID:         this.NumPingsSent,
+			CurrentRetries: 0, // Value is not used
+			IsPong:         false,
+			OriginIP:       "", // Set by receiving Crumpet
+		},
 	}
-}
-
-func (this *TTNetSession) respondToData(peerID string) error {
-	if resp, _, err := tt.ReadData(this.PeerConns[peerID]); err != nil {
+	serializer := encoder.InterTeatimeSerializer{}
+	encoded, err := serializer.Serialize(msg)
+	if err != nil {
 		return err
-	} else {
-		if tt.ByteArrayStringEquals(resp, tt.TEATIME_ALIVE_PING) {
-			this.NumPingsRcvd++
-
-			// Send we gucci
-			this.sendTTPong(peerID)
-		} else {
-			// TODO: Send received to delegate function
-			log.Printf("Received: %v", string(resp))
-		}
 	}
 
+	_, err = tt.SendData(this.PeerConns[peerID], encoded)
+	if err != nil {
+		return err
+	}
+
+	this.NumPingsSent++
 	return nil
 }
 
-func (this *TTNetSession) startConnListener(peerID string) {
-	for {
-		if err := this.respondToData(peerID); err != nil {
-			log.Printf("Connection responder crashed: %v", err)
-			break
-		}
+func (this *TTNetSession) sendTTPong(peerID string) error {
+	msg := encoder.TeatimeMessage{
+		Recipient: this.PeerList[peerID].RepoRemoteName,
+		Action:    encoder.ACTION_PING,
+		Payload: encoder.PingPayload{
+			PingID:         this.NumPongsSent,
+			CurrentRetries: 0, // Value is not used
+			IsPong:         true,
+			OriginIP:       "", // Set by receiving Crumpet
+		},
 	}
+	serializer := encoder.InterTeatimeSerializer{}
+	encoded, err := serializer.Serialize(msg)
+	if err != nil {
+		return err
+	}
+
+	_, err = tt.SendData(this.PeerConns[peerID], encoded)
+	if err != nil {
+		return err
+	}
+
+	this.NumPongsSent++
+	return nil
 }
 
 func (this *TTNetSession) startPingService(peerID string, pingInterval time.Duration) {
@@ -82,31 +71,21 @@ func (this *TTNetSession) startPingService(peerID string, pingInterval time.Dura
 
 	for {
 		log.Printf("Pinging %v at %v", peerID, time.Now())
-		if !this.checkPeer(peerID) {
-			log.Printf("Peer %v failed. Stopping pings", peerID)
-			ticker.Stop()
-			break
-		}
+		this.sendTTPing(peerID)
 
 		<-ticker.C
-	}
-}
 
-func (this *TTNetSession) startChangeNotifier(peerID string) {
-	ticker := time.NewTicker(1 * time.Second)
+		if this.NumPingsSent > 20 && this.NumPingsSent > 8*this.NumPongsRcvd {
+			log.Printf("Unreliable connection. Closing ", peerID)
 
-	for {
-		log.Printf("Polling for new files at %v", time.Now())
-		changedFiles, err := this.Repo.GetChangedFiles()
+			// Close connection
+			this.PeerConns[peerID].Close()
 
-		log.Printf("Files changed: %v, err: %v", changedFiles, err)
-		if changedFiles != nil && len(changedFiles) > 0 {
-			s := encode.ChangedFileListSerializer{}
-			encoded, err := s.Serialize(encode.ChangedFileListPayload{Filenames: changedFiles})
-			if err == nil {
-				tt.SendData(this.PeerConns[peerID], encoded)
-			}
+			// Remove peer
+			delete(this.PeerConns, peerID)
+			delete(this.PeerList, peerID)
+
+			return
 		}
-		<-ticker.C
 	}
 }

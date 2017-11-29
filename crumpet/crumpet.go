@@ -1,11 +1,9 @@
 package crumpet
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"os"
-	"path"
 
 	tt "github.com/elc1798/teatime"
 	fs "github.com/elc1798/teatime/fs"
@@ -14,7 +12,12 @@ import (
 type CrumpetDaemon struct {
 	impendingConnections map[string]chan bool
 	repoSockets          map[string]*net.UnixConn
+	peerConnections      map[string][]string
 	Listener             *net.TCPListener
+}
+
+func NewCrumpetDaemon() *CrumpetDaemon {
+	return new(CrumpetDaemon)
 }
 
 func (this *CrumpetDaemon) Start(global bool) {
@@ -23,6 +26,11 @@ func (this *CrumpetDaemon) Start(global bool) {
 	}
 
 	this.StartListener(global)
+}
+
+func waitForInput(c chan bool, s string) {
+	<-c
+	log.Printf("Repo '%v' connected to Crumpet!", s)
 }
 
 func (this *CrumpetDaemon) initFields() error {
@@ -42,6 +50,7 @@ func (this *CrumpetDaemon) initFields() error {
 func (this *CrumpetDaemon) setUpRepoSocketMap() error {
 	this.impendingConnections = make(map[string]chan bool)
 	this.repoSockets = make(map[string]*net.UnixConn)
+	this.peerConnections = make(map[string][]string)
 
 	repoList, err := fs.GetAllRepos()
 	if err != nil {
@@ -49,7 +58,7 @@ func (this *CrumpetDaemon) setUpRepoSocketMap() error {
 	}
 
 	for _, repo := range repoList {
-		socketPath := path.Join(tt.TEATIME_SOCKET_DIR, fmt.Sprintf("%v.sock", tt.TEATIME_SOCKET_DIR, repo.Name))
+		socketPath := tt.GetSocketPath(repo.Name)
 
 		listener, err := startUnixSocket(socketPath)
 		if err != nil {
@@ -57,16 +66,9 @@ func (this *CrumpetDaemon) setUpRepoSocketMap() error {
 		}
 
 		waitChan := make(chan bool)
-		go func() {
-			<-waitChan
-
-			log.Printf("Repo '%v' connected to Crumpet!", repo.Name)
-		}()
-
+		go waitForInput(waitChan, repo.Name)
 		go this.waitForNetSession(listener, repo, waitChan)
 		this.impendingConnections[repo.Name] = waitChan
-
-		// TODO: Start TTNetSession here
 	}
 
 	return nil
