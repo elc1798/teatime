@@ -3,6 +3,7 @@ package teatime
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -17,6 +18,7 @@ const TEATIME_BACKUP_DIR = ".backup/"
 const TEATIME_PEER_CACHE = "/peer_cache"
 const TEATIME_SOCKET_DIR = "/tmp/teatime/"
 const TEATIME_DIR_ROOT_STORE = "/dir_root"
+const TEATIME_CLI_SOCKET = "/tmp/teatime/tt_cli.sock"
 
 var TEATIME_DEFAULT_HOME = path.Join(os.Getenv("HOME"), ".teatime/")
 
@@ -143,7 +145,11 @@ func SendData(conn *net.TCPConn, bytes []byte) (int, error) {
  * Returns a byte array containing the read data, number of bytes read and an
  * error if unsuccessful
  */
-func ReadData(conn *net.TCPConn) ([]byte, int, error) {
+func ReadData(v interface{}) ([]byte, int, error) {
+	conn, ok := v.(net.Conn)
+	if !ok {
+		return nil, 0, errors.New("Invalid net.Conn")
+	}
 	full_reply := make([]byte, 0)
 	reply := make([]byte, 1)
 	reply[0] = byte(1) // Doesn't matter as long as it's not 0

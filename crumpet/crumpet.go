@@ -58,18 +58,26 @@ func (this *CrumpetDaemon) setUpRepoSocketMap() error {
 	}
 
 	for _, repo := range repoList {
-		socketPath := tt.GetSocketPath(repo.Name)
-
-		listener, err := startUnixSocket(socketPath)
-		if err != nil {
-			return err
+		if e1 := this.setUpRepoRoutines(repo); e1 != nil {
+			return e1
 		}
-
-		waitChan := make(chan bool)
-		go waitForInput(waitChan, repo.Name)
-		go this.waitForNetSession(listener, repo, waitChan)
-		this.impendingConnections[repo.Name] = waitChan
 	}
+
+	return nil
+}
+
+func (this *CrumpetDaemon) setUpRepoRoutines(repo *fs.Repo) error {
+	socketPath := tt.GetSocketPath(repo.Name)
+
+	listener, err := startUnixSocket(socketPath)
+	if err != nil {
+		return err
+	}
+
+	waitChan := make(chan bool)
+	go waitForInput(waitChan, repo.Name)
+	go this.waitForNetSession(listener, repo, waitChan)
+	this.impendingConnections[repo.Name] = waitChan
 
 	return nil
 }

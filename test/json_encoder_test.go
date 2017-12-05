@@ -134,3 +134,25 @@ func TestInterTeatimeSerializer(t *testing.T) {
 		t.Fatalf("Decoding error!")
 	}
 }
+
+func TestIntraTeatimeSerializer(t *testing.T) {
+	s1 := encoder.IntraTeatimeSerializer{}
+	x1 := []string{
+		encoder.COMMAND_INIT_REPO,
+		"repo1",
+		"/tmp/repo1",
+	}
+
+	decoded_obj := testEncodeDecode(&s1, x1, t)
+	decoded := decoded_obj.([]string)
+
+	if len(x1) != len(decoded) {
+		t.Fatalf("Decoding error!")
+	}
+
+	for i := 0; i < len(x1); i++ {
+		if x1[i] != decoded[i] {
+			t.Fatalf("Decoding error!")
+		}
+	}
+}
