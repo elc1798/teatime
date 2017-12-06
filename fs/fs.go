@@ -304,3 +304,25 @@ func (this *Repo) PatchFile(fileName string, diffString string) error {
 	err = tt.WriteFileObjToPath(&newfileobj, filepath)
 	return err
 }
+
+func (this *Repo) PatchFileMergeConflict(fileName string, conflictingDiffs []string) error {
+    if len(conflictingDiffs) < 2 {
+        return this.PatchFile(fileName, conflictingDiffs[0])
+    }
+
+	filepath := path.Join(this.GetTrackedDir(), fileName)
+	basefileptr, err := tt.GetFileObjFromFile(filepath)
+	if err != nil {
+		return err
+	}
+
+    newDiffString := diff.HandleMergeConflicts(*basefileptr, conflictingDiffs[0], conflictingDiffs[1]);
+    for i := 2; i < len(conflictingDiffs) - 1; i++ {
+	    newDiffString = diff.HandleMergeConflicts(*basefileptr, newDiffString, conflictingDiffs[i])
+    }
+
+    newfileobj := diff.ApplyDiff(*basefileptr, newDiffString)
+	err = tt.WriteFileObjToPath(&newfileobj, filepath)
+	return err
+
+}
