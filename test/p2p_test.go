@@ -7,93 +7,94 @@ import (
 	"time"
 
 	tt "github.com/elc1798/teatime"
+	crumpet "github.com/elc1798/teatime/crumpet"
 	p2p "github.com/elc1798/teatime/p2p"
 )
 
 const REPO_1 = "tt_test1"
 const REPO_2 = "tt_test2"
-const PING_INTERVAL = time.Millisecond * 150
 
 func TestBasicServer(t *testing.T) {
-	// Clear original teatime directory
 	tt.ResetTeatime()
+	p2p.PING_INTERVAL = time.Millisecond * 250
 
 	r1, d1, _ := setUpRepos(REPO_1)
 	defer os.RemoveAll(d1)
-	serverSession := p2p.NewTestSession(r1)
-	serverSession.StartListener(12345, false)
 
 	r2, d2, _ := setUpRepos(REPO_2)
 	defer os.RemoveAll(d2)
-	testSession := p2p.NewTestSession(r2)
-	timer := time.NewTimer(time.Millisecond * 300)
 
+	daemon := crumpet.NewCrumpetDaemon()
+	daemon.Start(false)
+
+	session1 := p2p.NewTTNetSession(r1)
+	session2 := p2p.NewTTNetSession(r2)
+
+	// Connect session1 to session2
+	timer := time.NewTimer(time.Millisecond * 500)
 	start_time := time.Now()
-	err := testSession.TryTeaTimeConn("localhost:12345", PING_INTERVAL)
-	t.Logf("Connection took %v", time.Since(start_time))
-
+	err := session1.TryTeaTimeConn("localhost", r2.Name)
+	t.Logf("TryTeaTimeConn took %v", time.Since(start_time))
 	<-timer.C
-
 	if err != nil {
-		t.Fatalf("Error in TryTeaTimeConn: %v\n", err)
+		t.Fatalf("TryTeaTimeConn failed: %v", err)
 	}
 
-	if len(testSession.PeerConns) != 1 {
-		t.Fatalf("Failed to append to peer connections: %v\n", testSession.PeerConns)
+	if len(session1.PeerConns) != 1 {
+		t.Fatalf("Failed to append to peer connections: %v\n", session1.PeerConns)
 	}
 
-	if len(testSession.PeerList) != 1 {
-		t.Fatalf("Failed to append to peer list: %v\n", testSession.PeerList)
+	if len(session1.PeerList) != 1 {
+		t.Fatalf("Failed to append to peer list: %v\n", session1.PeerList)
 	}
 
-	if len(serverSession.PeerList) != 1 {
-		t.Fatalf("Failed to append to peer list: %v\n", serverSession.PeerList)
+	if len(session2.PeerList) != 1 {
+		t.Fatalf("Failed to append to peer list: %v\n", session2.PeerList)
 	}
 
-	// Check for peers. The server session should have testSession as peer, and
-	// vice versa
-	if testSession.PeerList["127.0.0.1:12345"].IP != "127.0.0.1" {
-		t.Fatalf("Invalid peer connection: IP=%v\n", testSession.PeerList["127.0.0.1:12345"].IP)
+	if session1.PeerList["127.0.0.1"].IP != "127.0.0.1" {
+		t.Fatalf("Invalid peer connection: IP=%v\n", session1.PeerList["127.0.0.1"].IP)
 	}
 
-	if testSession.PeerList["127.0.0.1:12345"].Port != 12345 {
-		t.Fatalf("Invalid peer connection: Port=%v\n", testSession.PeerList["127.0.0.1:12345"].Port)
+	if session1.PeerList["127.0.0.1"].Port != tt.TEATIME_DEFAULT_PORT {
+		t.Fatalf("Invalid peer connection: Port=%v\n", session1.PeerList["127.0.0.1"].Port)
 	}
 
-	// Test Session Local Addr should be equal to server remote
-	for _, v := range serverSession.PeerList {
-		if v.IP != "127.0.0.1" {
-			t.Fatalf("Invalid peer connection: %v\n", v)
-		}
+	if session1.PeerList["127.0.0.1"].RepoRemoteName != r2.Name {
+		t.Fatalf("Invalid peer: %v", session1.PeerList["127.0.0.1"])
+	}
+
+	if session2.PeerList["127.0.0.1"].RepoRemoteName != r1.Name {
+		t.Fatalf("Invalid peer: %v", session2.PeerList["127.0.0.1"])
 	}
 
 	// Check that there were 2 ping pongs each
 	expected := map[string][2]int{
-		"NumPingsSent": [2]int{2, 0},
-		"NumPingsRcvd": [2]int{0, 2},
-		"NumPongsSent": [2]int{0, 2},
-		"NumPongsRcvd": [2]int{2, 0},
+		"NumPingsSent": [2]int{2, 2},
+		"NumPingsRcvd": [2]int{2, 2},
+		"NumPongsSent": [2]int{2, 2},
+		"NumPongsRcvd": [2]int{2, 2},
 	}
 
-	getValue := func(sess *p2p.TestSession, field string) int {
+	getValue := func(sess *p2p.TTNetSession, field string) int {
 		r1 := reflect.ValueOf(sess)
 		f1 := reflect.Indirect(r1).FieldByName(field)
 		return int(f1.Int())
 	}
 
 	for field, sol := range expected {
-		v0 := getValue(testSession, field)
-		v1 := getValue(serverSession, field)
+		v0 := getValue(session1, field)
+		v1 := getValue(session2, field)
 
-		t.Logf("TestSession has %d of %d %s", v0, sol[0], field)
-		t.Logf("ServerSession has %d of %d %s", v1, sol[1], field)
+		t.Logf("Session1 has %d of %d %s", v0, sol[0], field)
+		t.Logf("Session2 has %d of %d %s", v1, sol[1], field)
 
-		if v0 != sol[0] {
-			t.Fatalf("TestSession has %d of %d %s", v0, sol[0], field)
+		if v0 < sol[0] {
+			t.Fatalf("Session1 has %d of %d %s", v0, sol[0], field)
 		}
 
-		if v1 != sol[1] {
-			t.Fatalf("ServerSession has %d of %d %s", v1, sol[1], field)
+		if v1 < sol[1] {
+			t.Fatalf("Session2 has %d of %d %s", v1, sol[1], field)
 		}
 	}
 

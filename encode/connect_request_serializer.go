@@ -1,6 +1,7 @@
 package encode
 
 import (
+	json "encoding/json"
 	"errors"
 )
 
@@ -11,9 +12,14 @@ func (this *ConnectionRequestSerializer) Serialize(v interface{}) ([]byte, error
 	if !ok {
 		return nil, errors.New("Invalid input")
 	}
-	return []byte(obj), nil // We know that it's a string internally
+	return json.Marshal(obj)
 }
 
 func (this *ConnectionRequestSerializer) Deserialize(v []byte) (interface{}, error) {
-	return ConnectionRequestPayload(string(v)), nil
+	var data ConnectionRequestPayload
+	if err := json.Unmarshal(v, &data); err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }

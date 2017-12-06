@@ -34,12 +34,15 @@ func testEncodeDecode(s, input interface{}, t *testing.T) interface{} {
 
 func TestConnectRequestSerializer(t *testing.T) {
 	s1 := encoder.ConnectionRequestSerializer{}
-	x1 := encoder.ConnectionRequestPayload("abc")
+	x1 := encoder.ConnectionRequestPayload{
+		OriginIP:       "0.0.0.0",
+		RepoRemoteName: "bob",
+	}
 
 	decoded_obj := testEncodeDecode(&s1, x1, t)
 	decoded := decoded_obj.(encoder.ConnectionRequestPayload)
 
-	if x1 != decoded {
+	if x1.OriginIP != decoded.OriginIP || x1.RepoRemoteName != decoded.RepoRemoteName {
 		t.Fatalf("Decoded != Encoded")
 	}
 }
@@ -129,5 +132,27 @@ func TestInterTeatimeSerializer(t *testing.T) {
 	z1 := x1.Payload.(encoder.PingPayload)
 	if y1.PingID != z1.PingID || y1.CurrentRetries != z1.CurrentRetries || y1.IsPong != z1.IsPong {
 		t.Fatalf("Decoding error!")
+	}
+}
+
+func TestIntraTeatimeSerializer(t *testing.T) {
+	s1 := encoder.IntraTeatimeSerializer{}
+	x1 := []string{
+		encoder.COMMAND_INIT_REPO,
+		"repo1",
+		"/tmp/repo1",
+	}
+
+	decoded_obj := testEncodeDecode(&s1, x1, t)
+	decoded := decoded_obj.([]string)
+
+	if len(x1) != len(decoded) {
+		t.Fatalf("Decoding error!")
+	}
+
+	for i := 0; i < len(x1); i++ {
+		if x1[i] != decoded[i] {
+			t.Fatalf("Decoding error!")
+		}
 	}
 }

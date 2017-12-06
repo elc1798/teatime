@@ -92,9 +92,10 @@ type TeatimeMessage struct {
 }
 
 type PingPayload struct {
-	PingID         int  `json:"ping_id"`
-	CurrentRetries int  `json:"current_retries"`
-	IsPong         bool `json:"is_pong"`
+	PingID         int    `json:"ping_id"`
+	CurrentRetries int    `json:"current_retries"`
+	IsPong         bool   `json:"is_pong"`
+	OriginIP       string `json:"origin_ip"`
 }
 
 type ChangedFileListPayload struct {
@@ -106,4 +107,7 @@ type FileDeltasPayload struct {
 	Deltas     map[string]string `json:"deltas"`
 }
 
-type ConnectionRequestPayload string // This shouldn't be anything
+type ConnectionRequestPayload struct {
+	OriginIP       string `json:"origin_ip"`
+	RepoRemoteName string `json:"repo_remote_name"`
+}
