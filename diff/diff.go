@@ -45,7 +45,7 @@ func chooseDiff(diff1 dmp.Diff, diff2 dmp.Diff) dmp.Diff {
 	}
 	return diff1
 }
-func HandleMergeConflicts(basefile tt.File, delta1 string, delta2 string) tt.File {
+func HandleMergeConflicts(basefile tt.File, delta1 string, delta2 string) string {
 	d := dmp.New()
 	var newDiffs []dmp.Diff
 	diffs1, _ := d.DiffFromDelta(basefile.ToString(), delta1)
@@ -119,7 +119,6 @@ func HandleMergeConflicts(basefile tt.File, delta1 string, delta2 string) tt.Fil
 		index2++
 	}
 	newfileString := d.DiffText2(newDiffs)
-	newfile := tt.File{}
-	newfile.FromString(newfileString)
-	return newfile
+	mergediffs := d.DiffMain(basefile.ToString(), newfileString, false)
+	return d.DiffToDelta(mergediffs)
 }
