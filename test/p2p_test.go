@@ -16,6 +16,7 @@ const REPO_2 = "tt_test2"
 
 func TestBasicServer(t *testing.T) {
 	tt.ResetTeatime()
+	p2p.PING_INTERVAL = time.Millisecond * 800
 
 	r1, d1, _ := setUpRepos(REPO_1)
 	defer os.RemoveAll(d1)

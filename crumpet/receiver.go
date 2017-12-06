@@ -47,6 +47,8 @@ func (this *CrumpetDaemon) listenerAcceptLoop() {
 		}
 
 		log.Println("Crumpet.Listener: Accepting connection")
+		conn.SetKeepAlive(true)
+		conn.SetKeepAlivePeriod(time.Millisecond * 500)
 		go this.handleConnection(conn)
 	}
 }

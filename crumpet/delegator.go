@@ -18,12 +18,14 @@ func (this *CrumpetDaemon) StartDelegator(conn *net.TCPConn) {
 	for {
 		data, _, err := tt.ReadData(conn)
 		if err != nil {
+			// log.Printf("Crumpet.Delegator: Error reading data: %v", err)
 			continue
 		}
 
 		serializer := encoder.InterTeatimeSerializer{}
 		decoded_obj, err := serializer.Deserialize(data)
 		if err != nil {
+			// log.Printf("Crumpet.Delegator: Error deserializing data: %v", err)
 			continue
 		}
 

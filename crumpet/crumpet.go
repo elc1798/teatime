@@ -7,12 +7,14 @@ import (
 
 	tt "github.com/elc1798/teatime"
 	fs "github.com/elc1798/teatime/fs"
+	p2p "github.com/elc1798/teatime/p2p"
 )
 
 type CrumpetDaemon struct {
 	impendingConnections map[string]chan bool
 	repoSockets          map[string]*net.UnixConn
 	peerConnections      map[string][]string
+	netSessions          map[string]*p2p.TTNetSession
 	Listener             *net.TCPListener
 }
 
@@ -26,6 +28,7 @@ func (this *CrumpetDaemon) Start(global bool) {
 	}
 
 	this.StartListener(global)
+	this.startCLISocket()
 }
 
 func waitForInput(c chan bool, s string) {
@@ -35,10 +38,13 @@ func waitForInput(c chan bool, s string) {
 
 func (this *CrumpetDaemon) initFields() error {
 	// Set up socket directory
+	os.RemoveAll(tt.TEATIME_SOCKET_DIR)
 	if err := os.MkdirAll(tt.TEATIME_SOCKET_DIR, 0755); err != nil {
 		return err
 	}
 
+	// Set up Teatime directory
+	os.MkdirAll(tt.TEATIME_DEFAULT_HOME, 0755)
 	if err := this.setUpRepoSocketMap(); err != nil {
 		return err
 	}
@@ -51,6 +57,7 @@ func (this *CrumpetDaemon) setUpRepoSocketMap() error {
 	this.impendingConnections = make(map[string]chan bool)
 	this.repoSockets = make(map[string]*net.UnixConn)
 	this.peerConnections = make(map[string][]string)
+	this.netSessions = make(map[string]*p2p.TTNetSession)
 
 	repoList, err := fs.GetAllRepos()
 	if err != nil {
@@ -93,7 +100,7 @@ func startUnixSocket(socketPath string) (*net.UnixListener, error) {
 		return nil, err
 	}
 
-	listener.SetUnlinkOnClose(true)
+	listener.SetUnlinkOnClose(false)
 	return listener, nil
 }
 

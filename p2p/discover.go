@@ -3,6 +3,7 @@ package p2p
 import (
 	"fmt"
 	"net"
+	"time"
 
 	tt "github.com/elc1798/teatime"
 	encoder "github.com/elc1798/teatime/encode"
@@ -56,6 +57,8 @@ func (this *TTNetSession) TryTeaTimeConn(IP string, repoName string) error {
 	if err != nil {
 		return err
 	}
+	peerConnection.SetKeepAlive(true)
+	peerConnection.SetKeepAlivePeriod(time.Millisecond * 500)
 
 	if e1 := this.sendConnectionRequest(peerConnection, repoName); e1 != nil {
 		peerConnection.Close()

@@ -10,6 +10,8 @@ import (
 	encoder "github.com/elc1798/teatime/encode"
 )
 
+var PING_INTERVAL = time.Millisecond * 200
+
 func (this *TTNetSession) startCrumpetWatcher() error {
 	socketPath := tt.GetSocketPath(this.Repo.Name)
 	unixAddr, err := net.ResolveUnixAddr("unix", socketPath)
@@ -54,6 +56,10 @@ func (this *TTNetSession) watchCrumpet() {
 			if e2 := this.handleActionPing(decoded.Payload); e2 != nil {
 				log.Printf("HandleActionPingError: %v", e2)
 			}
+		case encoder.ACTION_FILE_LIST:
+			if e2 := this.handleActionFileList(decoded.Payload); e2 != nil {
+				log.Printf("HandleFileListError: %v", e2)
+			}
 		}
 	}
 }
@@ -88,7 +94,7 @@ func (this *TTNetSession) handleActionConnect(v interface{}) error {
 	}
 	// Start the Ping Service after we've connected to them and handled
 	// their connection
-	go this.startPingService(peerIP, time.Millisecond*800)
+	go this.startPingService(peerIP, PING_INTERVAL)
 
 	return nil
 }
@@ -113,4 +119,27 @@ func (this *TTNetSession) handleActionPing(v interface{}) error {
 
 		return this.sendTTPong(pingInfo.OriginIP)
 	}
+}
+
+func (this *TTNetSession) handleActionFileList(v interface{}) error {
+	fileListInfo, ok := v.(encoder.ChangedFileListPayload)
+	if !ok {
+		return errors.New("Invalid ChangedFileListPayload")
+	}
+
+	log.Printf("handleActionFileList called: %v", fileListInfo)
+
+	// Get our own changed files
+	ourChangedFiles, err := this.Repo.GetChangedFiles()
+	if err != nil {
+		return err
+	}
+
+	// We need to check if any of the files they changed correspond with files
+	// we changed, then send the appropriate diffs over. Patch the ones that we
+	// have not yet changed.
+	// TODO: Read above.
+
+	log.Printf("%v", ourChangedFiles)
+	return nil
 }

@@ -135,7 +135,12 @@ func ResetTeatime() error {
  *
  * Returns the number of bytes sent, and an error if unsuccessful
  */
-func SendData(conn *net.TCPConn, bytes []byte) (int, error) {
+func SendData(v interface{}, bytes []byte) (int, error) {
+	conn, ok := v.(net.Conn)
+	if !ok {
+		return 0, errors.New("Invalid net.Conn")
+	}
+
 	return conn.Write(append(bytes, byte(0)))
 }
 

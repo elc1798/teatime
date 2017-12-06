@@ -3,71 +3,51 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
 	"sort"
 
 	"github.com/urfave/cli"
 
-	fs "github.com/elc1798/teatime/fs"
+	tt "github.com/elc1798/teatime"
+	encoder "github.com/elc1798/teatime/encode"
 )
 
 func main() {
 	app := cli.NewApp()
 	app.Name = "teatime"
-	app.Usage = "make an explosive entrance"
+	app.Usage = "teatime [command] <args>"
 	app.Action = func(c *cli.Context) error {
-		fmt.Println("boom! I say!")
+		fmt.Println(app.Usage)
 		return nil
 	}
-	app.Commands = []cli.Command{
-		{
-			Name: "init",
-			Action: func(c *cli.Context) error {
-				// TODO: Uncomment this and fix the rest
-				/*
-					wd, _ := os.Getwd()
-					host := c.Args().Get(0)
-					repo, _ := fs.InitRepo(host, wd)
-				*/
-
-				/* Obsolete with crumpet changes
-				serverSession := p2p.NewTTNetSession(repo)
-				port := 2345
-				serverSession.StartListener(port, true)
-				if c.Args().Get(1) != "" {
-					serverSession.TryTeaTimeConn(fmt.Sprintf("%s:%d", host, port), time.Millisecond*250)
-				}
-				*/
-				return nil
-			},
+	app.Commands = []cli.Command{{
+		Name:  "start",
+		Usage: "Starts the Teatime Crumpet Daemon. Note: This operation hangs!",
+		Action: func(c *cli.Context) error {
+			startCrumpetAndHang()
+			return nil
 		},
-		{
-			Name: "start",
-			Action: func(c *cli.Context) error {
-				// TODO: Finish Crumpet first. Then call whatever methods
-				return nil
-			},
+	}, {
+		Name:  "reset",
+		Usage: "Resets Teatime metadata",
+		Action: func(c *cli.Context) error {
+			tt.ResetTeatime()
+			return nil
 		},
-		{
-			Name: "track",
-			Action: func(c *cli.Context) error {
-				wd, _ := os.Getwd()
-				repoName := c.Args().Get(0)
-				repo, _ := fs.LoadRepo(repoName)
-				fileName := c.Args().Get(1)
-				repo.AddFile(path.Join(wd, fileName))
-				return nil
-			},
+	}, {
+		Name:  "init",
+		Usage: "Marks the target directory as repository",
+		Action: func(c *cli.Context) error {
+			sendCrumpetCommand(append([]string{encoder.COMMAND_INIT_REPO}, os.Args[2:]...))
+			return nil
 		},
-		{
-			Name:    "lorem",
-			Aliases: []string{"l"},
-			Usage:   "lorem ipsum",
-			Action: func(c *cli.Context) error {
-				return nil
-			},
+	}, {
+		Name:  "connect",
+		Usage: "Connects the desired repo to the desired peer",
+		Action: func(c *cli.Context) error {
+			sendCrumpetCommand(append([]string{encoder.COMMAND_LINK_PEER}, os.Args[2:]...))
+			return nil
 		},
-	}
+	}}
 
 	sort.Sort(cli.CommandsByName(app.Commands))
 	app.Run(os.Args)

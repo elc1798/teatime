@@ -7,6 +7,7 @@ import (
 
 const COMMAND_INIT_REPO = "init_repo"
 const COMMAND_ADD_FILE = "add_file"
+const COMMAND_LINK_PEER = "link_peer"
 
 type intraTeatimePackage struct {
 	Command   string   `json:"command"`
