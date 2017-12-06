@@ -10,7 +10,7 @@ import (
 	encoder "github.com/elc1798/teatime/encode"
 )
 
-var PING_INTERVAL = time.Millisecond * 200
+var PING_INTERVAL = time.Millisecond * 1000
 
 func (this *TTNetSession) startCrumpetWatcher() error {
 	socketPath := tt.GetSocketPath(this.Repo.Name)
@@ -94,7 +94,7 @@ func (this *TTNetSession) handleActionConnect(v interface{}) error {
 	}
 	// Start the Ping Service after we've connected to them and handled
 	// their connection
-	go this.startPingService(peerIP, PING_INTERVAL)
+	go this.startPingService(peerIP, PING_INTERVAL, connectInfo.RepoRemoteName)
 
 	return nil
 }

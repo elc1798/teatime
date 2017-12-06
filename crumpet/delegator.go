@@ -18,14 +18,14 @@ func (this *CrumpetDaemon) StartDelegator(conn *net.TCPConn) {
 	for {
 		data, _, err := tt.ReadData(conn)
 		if err != nil {
-			// log.Printf("Crumpet.Delegator: Error reading data: %v", err)
-			continue
+			log.Printf("Crumpet.Delegator: Error reading data: %v", err)
+			break
 		}
 
 		serializer := encoder.InterTeatimeSerializer{}
 		decoded_obj, err := serializer.Deserialize(data)
 		if err != nil {
-			// log.Printf("Crumpet.Delegator: Error deserializing data: %v", err)
+			log.Printf("Crumpet.Delegator: Error deserializing data: %v", err)
 			continue
 		}
 
@@ -45,6 +45,9 @@ func (this *CrumpetDaemon) StartDelegator(conn *net.TCPConn) {
 			}
 		}
 	}
+
+	// If this is reached, connection died, and we should wait for reconnection
+	conn.Close()
 }
 
 func repoNotConnectedError(repoName string) error {

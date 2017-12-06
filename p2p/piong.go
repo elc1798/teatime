@@ -31,12 +31,12 @@ func (this *TTNetSession) sendTTPing(peerID string) error {
 		return err
 	}
 
+	this.NumPingsSent++
 	_, err = tt.SendData(this.PeerConns[peerID], encoded)
 	if err != nil {
 		return err
 	}
 
-	this.NumPingsSent++
 	return nil
 }
 
@@ -57,25 +57,25 @@ func (this *TTNetSession) sendTTPong(peerID string) error {
 		return err
 	}
 
+	this.NumPongsSent++
 	_, err = tt.SendData(this.PeerConns[peerID], encoded)
 	if err != nil {
 		return err
 	}
 
-	this.NumPongsSent++
 	return nil
 }
 
-func (this *TTNetSession) startPingService(peerID string, pingInterval time.Duration) {
+func (this *TTNetSession) startPingService(peerID string, pingInterval time.Duration, repoRemoteName string) {
 	ticker := time.NewTicker(pingInterval)
 
 	for {
-		log.Printf("Pinging %v at %v", peerID, time.Now())
+		log.Printf("[Repo: %v] Pinging %v at %v (id=%d)", this.Repo.Name, peerID, time.Now(), this.NumPingsSent)
 		this.sendTTPing(peerID)
 
 		<-ticker.C
 
-		if this.NumPingsSent > 20 && this.NumPingsSent > 8*this.NumPongsRcvd {
+		if this.NumPingsSent > 20 && this.NumPingsSent > 2*this.NumPongsRcvd {
 			log.Printf("Unreliable connection. Closing ", peerID)
 
 			// Close connection
@@ -85,7 +85,12 @@ func (this *TTNetSession) startPingService(peerID string, pingInterval time.Dura
 			delete(this.PeerConns, peerID)
 			delete(this.PeerList, peerID)
 
-			return
+			break
 		}
+	}
+
+	// If this is ever reached... we should attempt a reconnection
+	if err := this.TryTeaTimeConn(peerID, repoRemoteName); err != nil {
+		log.Printf("Reconnect failed. Aborting.")
 	}
 }
