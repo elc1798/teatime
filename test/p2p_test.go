@@ -16,7 +16,7 @@ const REPO_2 = "tt_test2"
 
 func TestBasicServer(t *testing.T) {
 	tt.ResetTeatime()
-	p2p.PING_INTERVAL = time.Millisecond * 800
+	p2p.PING_INTERVAL = time.Millisecond * 250
 
 	r1, d1, _ := setUpRepos(REPO_1)
 	defer os.RemoveAll(d1)
@@ -31,7 +31,7 @@ func TestBasicServer(t *testing.T) {
 	session2 := p2p.NewTTNetSession(r2)
 
 	// Connect session1 to session2
-	timer := time.NewTimer(time.Millisecond * 1600)
+	timer := time.NewTimer(time.Millisecond * 500)
 	start_time := time.Now()
 	err := session1.TryTeaTimeConn("localhost", r2.Name)
 	t.Logf("TryTeaTimeConn took %v", time.Since(start_time))
