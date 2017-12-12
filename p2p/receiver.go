@@ -32,11 +32,14 @@ func (this *TTNetSession) startCrumpetWatcher() error {
 
 func (this *TTNetSession) watchCrumpet() {
 	for {
-		crumpetData := make([]byte, 2048)
-		n, err := this.CrumpetWatcher.Read(crumpetData)
+		crumpetData, _, err := tt.ReadData(this.CrumpetWatcher)
+		if err != nil {
+			log.Printf("Error reading from Crumpet!")
+			continue
+		}
 
 		serializer := encoder.InterTeatimeSerializer{}
-		decoded_obj, err := serializer.Deserialize(crumpetData[:n])
+		decoded_obj, err := serializer.Deserialize(crumpetData)
 		if err != nil {
 			log.Printf("Error decoding Crumpet data: %v", err)
 			continue
@@ -78,6 +81,12 @@ func (this *TTNetSession) handleActionConnect(v interface{}) error {
 		log.Printf("TTNetSession.Receiver: Peer '%v' already exists", peerIP)
 		return nil
 	}
+	log.Printf("Repo %v received connection request from %v", this.Repo.Name, connectInfo.RepoRemoteName)
+
+	if err := this.TryTeaTimeConn(peerIP, connectInfo.RepoRemoteName); err != nil {
+		// Remove from peer list
+		return err
+	}
 
 	this.PeerList[peerIP] = Peer{
 		IP:             peerIP,
@@ -85,13 +94,7 @@ func (this *TTNetSession) handleActionConnect(v interface{}) error {
 		RepoRemoteName: connectInfo.RepoRemoteName,
 	}
 
-	if _, ok := this.PeerConns[peerIP]; !ok {
-		if err := this.TryTeaTimeConn(peerIP, connectInfo.RepoRemoteName); err != nil {
-			// Remove from peer list
-			delete(this.PeerList, peerIP)
-			return err
-		}
-	}
+	log.Printf("Repo %v accepted request from %v", this.Repo.Name, connectInfo.RepoRemoteName)
 	// Start the Ping Service after we've connected to them and handled
 	// their connection
 	go this.startPingService(peerIP, PING_INTERVAL, connectInfo.RepoRemoteName)

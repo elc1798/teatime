@@ -2,8 +2,8 @@ package p2p
 
 import (
 	"fmt"
+	"log"
 	"net"
-	"time"
 
 	tt "github.com/elc1798/teatime"
 	encoder "github.com/elc1798/teatime/encode"
@@ -49,23 +49,21 @@ func (this *TTNetSession) TryTeaTimeConn(IP string, repoName string) error {
 	}
 
 	ipv4 := fmt.Sprintf("%v", tcpAddr.IP)
-	if this.PeerConns[ipv4] != nil {
+	if _, ok := this.PeerList[ipv4]; ok {
 		return fmt.Errorf("TTNetSession.Discover: Peer '%v' already exists", ipv4)
 	}
 
+	log.Printf("Repo %v sending connection request to %v", this.Repo.Name, repoName)
 	peerConnection, err := makeTCPConn(host)
 	if err != nil {
 		return err
 	}
-	peerConnection.SetKeepAlive(true)
-	peerConnection.SetKeepAlivePeriod(time.Millisecond * 500)
 
 	if e1 := this.sendConnectionRequest(peerConnection, repoName); e1 != nil {
-		peerConnection.Close()
 		return e1
 	}
-
-	this.PeerConns[ipv4] = peerConnection
+	peerConnection.Close()
+	log.Printf("Repo %v sent connection request to %v", this.Repo.Name, repoName)
 
 	return nil
 }

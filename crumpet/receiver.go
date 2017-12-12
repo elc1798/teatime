@@ -5,10 +5,8 @@ import (
 	"log"
 	"net"
 	"strconv"
-	"time"
 
 	tt "github.com/elc1798/teatime"
-	encoder "github.com/elc1798/teatime/encode"
 )
 
 func (this *CrumpetDaemon) StartListener(global bool) error {
@@ -47,53 +45,6 @@ func (this *CrumpetDaemon) listenerAcceptLoop() {
 		}
 
 		log.Println("Crumpet.Listener: Accepting connection")
-		conn.SetKeepAlive(true)
-		conn.SetKeepAlivePeriod(time.Millisecond * 500)
-		go this.handleConnection(conn)
+		go this.Delegate(conn)
 	}
-}
-
-func (this *CrumpetDaemon) handleConnection(conn *net.TCPConn) {
-	// Do Teatime handshake
-	msg, err := waitForConnectionRequest(conn)
-	if err != nil {
-		conn.Close()
-		log.Printf("Crumpet.Listener: HandshakeError->(%v)", err)
-		return
-	}
-
-	if err2 := this.handleActionConnReq(conn, msg); err2 != nil {
-		conn.Close()
-		log.Printf("Crumpet.Listener: ConnectionRequestError->(%v)", err2)
-		return
-	}
-
-	// Start Delegator
-	go this.StartDelegator(conn)
-}
-
-func waitForConnectionRequest(conn *net.TCPConn) (encoder.TeatimeMessage, error) {
-	conn.SetReadDeadline(time.Now().Add(time.Second * 2))
-	data, _, err := tt.ReadData(conn)
-	if err != nil {
-		return encoder.TeatimeMessage{}, err
-	}
-
-	serializer := encoder.InterTeatimeSerializer{}
-	decoded_obj, err := serializer.Deserialize(data)
-	// log.Printf("%v, %v", string(data), decoded_obj)
-	if err != nil {
-		return encoder.TeatimeMessage{}, err
-	}
-
-	decoded, ok := decoded_obj.(encoder.TeatimeMessage)
-	if !ok {
-		return encoder.TeatimeMessage{}, errors.New("Invalid TeatimeMessage")
-	}
-
-	if decoded.Action != encoder.ACTION_CONNECT {
-		return encoder.TeatimeMessage{}, errors.New("Not a connection attempt")
-	}
-
-	return decoded, nil
 }

@@ -19,8 +19,7 @@ type Peer struct {
 }
 
 type TTNetSession struct {
-	CAConn         *net.TCPConn            // Connection to central authority
-	PeerConns      map[string]*net.TCPConn // List of peer connections
+	CAConn         *net.TCPConn // Connection to central authority
 	PeerList       map[string]Peer
 	Repo           *fs.Repo
 	CrumpetWatcher *net.UnixConn // Unix Domain Socket for Crumpet communication
@@ -41,7 +40,6 @@ func NewTTNetSession(repo *fs.Repo) *TTNetSession {
 	newSession := new(TTNetSession)
 	newSession.Repo = repo
 	newSession.CAConn = nil
-	newSession.PeerConns = make(map[string]*net.TCPConn)
 	newSession.PeerList = make(map[string]Peer)
 
 	// Connect to Crumpet. Return nil if failed.
@@ -73,7 +71,6 @@ func NewTestTTNetSession(repo *fs.Repo) *TTNetSession {
 	newSession := new(TTNetSession)
 	newSession.Repo = repo
 	newSession.CAConn = nil
-	newSession.PeerConns = make(map[string]*net.TCPConn)
 	newSession.PeerList = make(map[string]Peer)
 
 	newSession.NumPingsSent = 0

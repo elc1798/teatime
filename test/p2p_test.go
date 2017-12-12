@@ -40,10 +40,6 @@ func TestBasicServer(t *testing.T) {
 		t.Fatalf("TryTeaTimeConn failed: %v", err)
 	}
 
-	if len(session1.PeerConns) != 1 {
-		t.Fatalf("Failed to append to peer connections: %v\n", session1.PeerConns)
-	}
-
 	if len(session1.PeerList) != 1 {
 		t.Fatalf("Failed to append to peer list: %v\n", session1.PeerList)
 	}

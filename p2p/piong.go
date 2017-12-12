@@ -7,6 +7,7 @@
 package p2p
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -31,8 +32,14 @@ func (this *TTNetSession) sendTTPing(peerID string) error {
 		return err
 	}
 
+	peerConnection, err := makeTCPConn(fmt.Sprintf("%v:%v", peerID, tt.TEATIME_DEFAULT_PORT))
+	if err != nil {
+		return err
+	}
+	defer peerConnection.Close()
+
 	this.NumPingsSent++
-	_, err = tt.SendData(this.PeerConns[peerID], encoded)
+	_, err = tt.SendData(peerConnection, encoded)
 	if err != nil {
 		return err
 	}
@@ -57,8 +64,14 @@ func (this *TTNetSession) sendTTPong(peerID string) error {
 		return err
 	}
 
+	peerConnection, err := makeTCPConn(fmt.Sprintf("%v:%v", peerID, tt.TEATIME_DEFAULT_PORT))
+	if err != nil {
+		return err
+	}
+	defer peerConnection.Close()
+
 	this.NumPongsSent++
-	_, err = tt.SendData(this.PeerConns[peerID], encoded)
+	_, err = tt.SendData(peerConnection, encoded)
 	if err != nil {
 		return err
 	}
@@ -78,18 +91,18 @@ func (this *TTNetSession) startPingService(peerID string, pingInterval time.Dura
 		if this.NumPingsSent > 20 && this.NumPingsSent > 2*this.NumPongsRcvd {
 			log.Printf("Unreliable connection. Closing ", peerID)
 
-			// Close connection
-			this.PeerConns[peerID].Close()
-
 			// Remove peer
-			delete(this.PeerConns, peerID)
 			delete(this.PeerList, peerID)
 
 			break
 		}
 	}
 
-	// If this is ever reached... we should attempt a reconnection
+	// If this is ever reached... we should attempt a reconnection.
+	// NOTE: This is NOT just a TCP reconnect. TryTeaTimeConnect sends a CONNECT
+	// request payload. Assuming the peer is still up, they may have removed us
+	// as a peer, and are therefore rejecting our pings. Hence, we should resend
+	// connect request.
 	if err := this.TryTeaTimeConn(peerID, repoRemoteName); err != nil {
 		log.Printf("Reconnect failed. Aborting.")
 	}

@@ -13,41 +13,40 @@ import (
 // desired repo, and the data to be passed to that repo. (Use
 // encode.Serializer!) Crumpet should delegate to the corresponding repoSocket.
 
-func (this *CrumpetDaemon) StartDelegator(conn *net.TCPConn) {
+func (this *CrumpetDaemon) Delegate(conn *net.TCPConn) {
+	defer conn.Close()
+
 	// Assumes that connection was made already
-	for {
-		data, _, err := tt.ReadData(conn)
-		if err != nil {
-			log.Printf("Crumpet.Delegator: Error reading data: %v", err)
-			break
-		}
-
-		serializer := encoder.InterTeatimeSerializer{}
-		decoded_obj, err := serializer.Deserialize(data)
-		if err != nil {
-			log.Printf("Crumpet.Delegator: Error deserializing data: %v", err)
-			continue
-		}
-
-		decoded, ok := decoded_obj.(encoder.TeatimeMessage)
-		if !ok {
-			continue
-		}
-
-		switch decoded.Action {
-		case encoder.ACTION_CONNECT:
-			if err := this.handleActionConnReq(conn, decoded); err != nil {
-				log.Printf("Crumpet.Delegator.ActionConnReq error: %v", err)
-			}
-		case encoder.ACTION_PING:
-			if err := this.handleActionPing(conn, decoded); err != nil {
-				log.Printf("Crumpet.Delegator.ActionPing error: %v", err)
-			}
-		}
+	data, _, err := tt.ReadData(conn)
+	if err != nil {
+		log.Printf("Crumpet.Delegator: Error reading data: %v", err)
+		log.Printf("Data gotten so far: %v", string(data))
+		log.Printf("As array: %v", data)
+		return
 	}
 
-	// If this is reached, connection died, and we should wait for reconnection
-	conn.Close()
+	serializer := encoder.InterTeatimeSerializer{}
+	decoded_obj, err := serializer.Deserialize(data)
+	if err != nil {
+		log.Printf("Crumpet.Delegator: Error deserializing data: %v", err)
+		return
+	}
+
+	decoded, ok := decoded_obj.(encoder.TeatimeMessage)
+	if !ok {
+		return
+	}
+
+	switch decoded.Action {
+	case encoder.ACTION_CONNECT:
+		if err := this.handleActionConnReq(conn, decoded); err != nil {
+			log.Printf("Crumpet.Delegator.ActionConnReq error: %v", err)
+		}
+	case encoder.ACTION_PING:
+		if err := this.handleActionPing(conn, decoded); err != nil {
+			log.Printf("Crumpet.Delegator.ActionPing error: %v", err)
+		}
+	}
 }
 
 func repoNotConnectedError(repoName string) error {
@@ -90,7 +89,7 @@ func (this *CrumpetDaemon) handleActionConnReq(conn *net.TCPConn, msg encoder.Te
 
 	// This really should not error...
 	encoded, _ := serializer.Serialize(connectionInfo)
-	if _, err := this.repoSockets[desiredRepo].Write(encoded); err != nil {
+	if _, err := tt.SendData(this.repoSockets[desiredRepo], encoded); err != nil {
 		return err
 	}
 
@@ -124,6 +123,6 @@ func (this *CrumpetDaemon) handleActionPing(conn *net.TCPConn, msg encoder.Teati
 	encoded, _ := serializer.Serialize(msg)
 
 	log.Printf("Crumpet.HandleActionPing: encoded=%v", string(encoded))
-	_, err := this.repoSockets[msg.Recipient].Write(encoded)
+	_, err := tt.SendData(this.repoSockets[msg.Recipient], encoded)
 	return err
 }
