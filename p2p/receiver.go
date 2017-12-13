@@ -10,7 +10,7 @@ import (
 	encoder "github.com/elc1798/teatime/encode"
 )
 
-var PING_INTERVAL = time.Millisecond * 1000
+var PING_INTERVAL = time.Millisecond * 5000
 
 func (this *TTNetSession) startCrumpetWatcher() error {
 	socketPath := tt.GetSocketPath(this.Repo.Name)
@@ -59,8 +59,8 @@ func (this *TTNetSession) watchCrumpet() {
 			if e2 := this.handleActionPing(decoded.Payload); e2 != nil {
 				log.Printf("HandleActionPingError: %v", e2)
 			}
-		case encoder.ACTION_FILE_LIST:
-			if e2 := this.handleActionFileList(decoded.Payload); e2 != nil {
+		case encoder.ACTION_DELTAS:
+			if e2 := this.handleActionFileDeltas(decoded.Payload); e2 != nil {
 				log.Printf("HandleFileListError: %v", e2)
 			}
 		}
@@ -99,6 +99,9 @@ func (this *TTNetSession) handleActionConnect(v interface{}) error {
 	// their connection
 	go this.startPingService(peerIP, PING_INTERVAL, connectInfo.RepoRemoteName)
 
+	// Start file diff service
+	go this.startFileTrackerService(peerIP, connectInfo.RepoRemoteName)
+
 	return nil
 }
 
@@ -124,25 +127,66 @@ func (this *TTNetSession) handleActionPing(v interface{}) error {
 	}
 }
 
-func (this *TTNetSession) handleActionFileList(v interface{}) error {
-	fileListInfo, ok := v.(encoder.ChangedFileListPayload)
+func (this *TTNetSession) handleActionFileDeltas(v interface{}) error {
+	deltasInfo, ok := v.(encoder.FileDeltasPayload)
 	if !ok {
-		return errors.New("Invalid ChangedFileListPayload")
+		return errors.New("Invalid FileDeltasPayload")
 	}
 
-	log.Printf("handleActionFileList called: %v", fileListInfo)
+	log.Printf("handleActionFileDeltas called: %v", deltasInfo)
+	if _, hasPeer := this.PeerList[deltasInfo.OriginIP]; !hasPeer {
+		return errors.New("Ping originated from unregistered peer!")
+	}
+
+	if deltasInfo.IsAck {
+		// Diffs that remote did not apply were removed from map
+		for fileName, _ := range deltasInfo.Deltas {
+			this.Repo.WriteBackupFile(fileName)
+		}
+
+		// Resume polling
+		this.resumeFilePollChans[deltasInfo.OriginIP] <- true
+		return nil
+	}
 
 	// Get our own changed files
 	ourChangedFiles, err := this.Repo.GetChangedFiles()
 	if err != nil {
 		return err
 	}
+	ourDiffStrings, _ := this.Repo.GetDiffStrings(ourChangedFiles)
+	fileDiffMap := make(map[string]string)
+	for i, v := range ourChangedFiles {
+		fileDiffMap[v] = ourDiffStrings[i]
+	}
+
+	appliedFiles := make(map[string]string)
 
 	// We need to check if any of the files they changed correspond with files
 	// we changed, then send the appropriate diffs over. Patch the ones that we
 	// have not yet changed.
-	// TODO: Read above.
+	for fileName, diffString := range deltasInfo.Deltas {
+		ourDiff, ok := fileDiffMap[fileName]
+		if ok {
+			err = this.Repo.PatchFileMergeConflict(fileName, []string{diffString, ourDiff})
+			if err != nil {
+				log.Printf("%v: Error fixing merge conflict: %v", this.Repo.Name, err)
+				continue
+			}
+		} else {
+			err = this.Repo.PatchFile(fileName, diffString)
+			if err != nil {
+				log.Printf("%v: Error patching: %v", this.Repo.Name, err)
+				continue
+			}
+		}
 
-	log.Printf("%v", ourChangedFiles)
+		this.Repo.WriteBackupFile(fileName)
+		appliedFiles[fileName] = "applied"
+	}
+
+	// Respond with deltas ack
+	this.sendDeltasAck(deltasInfo.OriginIP, appliedFiles)
+
 	return nil
 }

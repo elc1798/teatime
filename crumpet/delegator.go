@@ -46,6 +46,10 @@ func (this *CrumpetDaemon) Delegate(conn *net.TCPConn) {
 		if err := this.handleActionPing(conn, decoded); err != nil {
 			log.Printf("Crumpet.Delegator.ActionPing error: %v", err)
 		}
+	case encoder.ACTION_DELTAS:
+		if err := this.handleActionFileDeltas(conn, decoded); err != nil {
+			log.Printf("Crumpet.Delegator.ActionFileDeltas error: %v", err)
+		}
 	}
 }
 
@@ -123,6 +127,28 @@ func (this *CrumpetDaemon) handleActionPing(conn *net.TCPConn, msg encoder.Teati
 	encoded, _ := serializer.Serialize(msg)
 
 	log.Printf("Crumpet.HandleActionPing: encoded=%v", string(encoded))
+	_, err := tt.SendData(this.repoSockets[msg.Recipient], encoded)
+	return err
+}
+
+func (this *CrumpetDaemon) handleActionFileDeltas(conn *net.TCPConn, msg encoder.TeatimeMessage) error {
+	deltasInfo, ok := msg.Payload.(encoder.FileDeltasPayload)
+	if !ok {
+		return fmt.Errorf("Crumpet.Delegator: Invalid file deltas payload")
+	}
+
+	// Check if Repo is connected
+	if _, ok := this.repoSockets[msg.Recipient]; !ok {
+		return repoNotConnectedError(msg.Recipient)
+	}
+
+	deltasInfo.OriginIP = getIPFromRemoteConn(conn)
+	msg.Payload = deltasInfo
+
+	serializer := encoder.InterTeatimeSerializer{}
+	encoded, _ := serializer.Serialize(msg)
+
+	log.Printf("Crumpet.HandleActionFileDeltas: encoded=%v", string(encoded))
 	_, err := tt.SendData(this.repoSockets[msg.Recipient], encoded)
 	return err
 }

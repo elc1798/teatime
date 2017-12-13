@@ -29,6 +29,8 @@ type TTNetSession struct {
 	NumPingsRcvd int
 	NumPongsSent int
 	NumPongsRcvd int
+
+	resumeFilePollChans map[string]chan bool
 }
 
 var peerListSerializer = encoder.NewDefaultSerializer(make(map[string]Peer))
@@ -41,6 +43,7 @@ func NewTTNetSession(repo *fs.Repo) *TTNetSession {
 	newSession.Repo = repo
 	newSession.CAConn = nil
 	newSession.PeerList = make(map[string]Peer)
+	newSession.resumeFilePollChans = make(map[string]chan bool)
 
 	// Connect to Crumpet. Return nil if failed.
 	if err := newSession.startCrumpetWatcher(); err != nil {
@@ -72,6 +75,7 @@ func NewTestTTNetSession(repo *fs.Repo) *TTNetSession {
 	newSession.Repo = repo
 	newSession.CAConn = nil
 	newSession.PeerList = make(map[string]Peer)
+	newSession.resumeFilePollChans = make(map[string]chan bool)
 
 	newSession.NumPingsSent = 0
 	newSession.NumPingsRcvd = 0

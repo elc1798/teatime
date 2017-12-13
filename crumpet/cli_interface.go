@@ -107,6 +107,20 @@ func (this *CrumpetDaemon) handleCLICommand(conn *net.UnixConn, decoded []string
 			return
 		}
 	case encoder.COMMAND_ADD_FILE:
+		if len(decoded) != 3 {
+			logAndSendMsg(fmt.Sprintf("Crumpet.CLI: Invalid ADD_FILE command: %v", decoded), conn, true)
+			return
+		}
+
+		if _, ok := this.netSessions[decoded[1]]; !ok {
+			logAndSendMsg(fmt.Sprintf("Crumpet.CLI: Repo %v does not exist", decoded[1]), conn, true)
+			return
+		}
+
+		if e1 := this.netSessions[decoded[1]].Repo.AddFile(decoded[2]); e1 != nil {
+			logAndSendMsg(fmt.Sprintf("Crumpet.CLI: Could not add file: %v", e1), conn, true)
+			return
+		}
 	default:
 		logAndSendMsg(fmt.Sprintf("Crumpet.CLI: Invalid command: %v", decoded[0]), conn, true)
 	}

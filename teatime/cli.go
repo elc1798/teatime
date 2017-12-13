@@ -47,6 +47,13 @@ func main() {
 			sendCrumpetCommand(append([]string{encoder.COMMAND_LINK_PEER}, os.Args[2:]...))
 			return nil
 		},
+	}, {
+		Name:  "add",
+		Usage: "Add a file in a repository to tracking",
+		Action: func(c *cli.Context) error {
+			sendCrumpetCommand(append([]string{encoder.COMMAND_ADD_FILE}, os.Args[2:]...))
+			return nil
+		},
 	}}
 
 	sort.Sort(cli.CommandsByName(app.Commands))

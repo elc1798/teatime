@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"path"
-	"path/filepath"
 	"time"
 
 	tt "github.com/elc1798/teatime"
@@ -25,21 +24,20 @@ func (this *Repo) AddFile(relativePath string) error {
 		return ErrorNotRepo(this.RepoDir)
 	}
 
-	_, file := filepath.Split(relativePath)
-	tempLinkName := getTempLinkName(file)
-	finalLinkPath := path.Join(this.GetTrackedDir(), relativePath)
+	linkName := path.Join(this.GetTrackedDir(), relativePath)
+	log.Printf("Created link %v", linkName)
 
-	if pathExists(finalLinkPath) {
+	if pathExists(linkName) {
 		return ErrorAlreadyTrackingFile(relativePath)
 	}
 
-	err := os.Link(path.Join(this.RootDir, relativePath), tempLinkName)
+	err := os.Link(path.Join(this.RootDir, relativePath), linkName)
 	if err != nil {
 		return err
 	}
 
 	defer this.WriteBackupFile(relativePath)
-	return os.Rename(tempLinkName, finalLinkPath)
+	return nil
 }
 
 /*
@@ -69,8 +67,6 @@ func (this *Repo) WriteBackupFile(trackedRelPath string) error {
  * Returns true if any file in the repo has been changed.
  */
 func (this *Repo) haveAnyFilesChanged() (bool, error) {
-	log.Println("haveAnyFilesChanged called!")
-
 	//Send out task to check for difference in each file in tracked directory
 	files, err := ioutil.ReadDir(this.GetTrackedDir())
 	var numTracked int = len(files)
@@ -140,23 +136,26 @@ func (this *Repo) GetChangedFiles() ([]string, error) {
 }
 
 func (this *Repo) GetDiffStrings(filesToDiff []string) ([]string, []error) {
-	//Send out task to build diffstring from file
-	var numToDiff int = len(filesToDiff)
-	diffChannels := make([]chan string, numToDiff)
-	errChannels := make([]chan error, numToDiff)
-	for i := 0; i < numToDiff; i++ {
-		diffChannels[i] = make(chan string)
-		errChannels[i] = make(chan error)
-		go this.getDiffString(diffChannels[i], errChannels[i], filesToDiff[i])
-	}
+	diffStrings := make([]string, len(filesToDiff))
+	errors := make([]error, len(filesToDiff))
 
-	//Receive the results and build result string array
-	var diffStrings []string
-	var errors []error
-	for i := 0; i < numToDiff; i++ {
-		errors[i] = <-errChannels[i]
-		diffValue := <-diffChannels[i]
-		diffStrings = append(diffStrings, diffValue)
+	for i, fileName := range filesToDiff {
+		fileTracked, err := tt.GetFileObjFromFile(path.Join(this.GetTrackedDir(), fileName))
+		if err != nil {
+			diffStrings[i] = ""
+			errors[i] = err
+			continue
+		}
+
+		fileBackup, err := tt.GetFileObjFromFile(path.Join(this.GetBackupDir(), fileName))
+		if err != nil {
+			diffStrings[i] = ""
+			errors[i] = err
+			continue
+		}
+
+		diffStrings[i] = diff.CreateDiff(*fileBackup, *fileTracked)
+		errors[i] = nil
 	}
 
 	return diffStrings, errors
@@ -195,14 +194,18 @@ func (this *Repo) getDiffString(result chan string, errChan chan error, fileName
 		errChan <- err
 		return
 	}
+	log.Printf("Got tracked file contents")
 	fileBackup, err := tt.GetFileObjFromFile(path.Join(this.GetBackupDir(), fileName))
 	if err != nil {
 		result <- ""
 		errChan <- err
 		return
 	}
+	log.Printf("Got backup file contents")
 
-	result <- diff.CreateDiff(*fileBackup, *fileTracked)
+	fdiff := diff.CreateDiff(*fileBackup, *fileTracked)
+	log.Printf("Got diff: %v", fdiff)
+	result <- fdiff
 	errChan <- err
 }
 
@@ -306,9 +309,9 @@ func (this *Repo) PatchFile(fileName string, diffString string) error {
 }
 
 func (this *Repo) PatchFileMergeConflict(fileName string, conflictingDiffs []string) error {
-    if len(conflictingDiffs) < 2 {
-        return this.PatchFile(fileName, conflictingDiffs[0])
-    }
+	if len(conflictingDiffs) < 2 {
+		return this.PatchFile(fileName, conflictingDiffs[0])
+	}
 
 	filepath := path.Join(this.GetTrackedDir(), fileName)
 	basefileptr, err := tt.GetFileObjFromFile(filepath)
@@ -316,12 +319,12 @@ func (this *Repo) PatchFileMergeConflict(fileName string, conflictingDiffs []str
 		return err
 	}
 
-    newDiffString := diff.HandleMergeConflicts(*basefileptr, conflictingDiffs[0], conflictingDiffs[1]);
-    for i := 2; i < len(conflictingDiffs) - 1; i++ {
-	    newDiffString = diff.HandleMergeConflicts(*basefileptr, newDiffString, conflictingDiffs[i])
-    }
+	newDiffString := diff.HandleMergeConflicts(*basefileptr, conflictingDiffs[0], conflictingDiffs[1])
+	for i := 2; i < len(conflictingDiffs)-1; i++ {
+		newDiffString = diff.HandleMergeConflicts(*basefileptr, newDiffString, conflictingDiffs[i])
+	}
 
-    newfileobj := diff.ApplyDiff(*basefileptr, newDiffString)
+	newfileobj := diff.ApplyDiff(*basefileptr, newDiffString)
 	err = tt.WriteFileObjToPath(&newfileobj, filepath)
 	return err
 

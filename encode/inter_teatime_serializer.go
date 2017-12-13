@@ -103,8 +103,10 @@ type ChangedFileListPayload struct {
 }
 
 type FileDeltasPayload struct {
+	OriginIP   string            `json:"origin_ip"`
 	RevisionID int               `json:"revision_id"`
 	Deltas     map[string]string `json:"deltas"`
+	IsAck      bool              `json:"is_ack"`
 }
 
 type ConnectionRequestPayload struct {

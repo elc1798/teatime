@@ -16,11 +16,6 @@ type intraTeatimePackage struct {
 
 type IntraTeatimeSerializer struct{}
 
-func isValidCommand(command string) bool {
-	return command == COMMAND_INIT_REPO ||
-		command == COMMAND_ADD_FILE
-}
-
 func (this *IntraTeatimeSerializer) Serialize(v interface{}) ([]byte, error) {
 	obj, ok := v.([]string)
 	if !ok {
