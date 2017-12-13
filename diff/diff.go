@@ -48,8 +48,13 @@ func chooseDiff(diff1 dmp.Diff, diff2 dmp.Diff) dmp.Diff {
 func HandleMergeConflicts(basefile tt.File, delta1 string, delta2 string) string {
 	d := dmp.New()
 	var newDiffs []dmp.Diff
-	diffs1, _ := d.DiffFromDelta(basefile.ToString(), delta1)
-	diffs2, _ := d.DiffFromDelta(basefile.ToString(), delta2)
+
+	diffs2, _ := d.DiffFromDelta(basefile.ToString(), delta1)
+	diffs1, _ := d.DiffFromDelta(basefile.ToString(), delta2)
+	if delta1 > delta2 {
+		diffs1, _ = d.DiffFromDelta(basefile.ToString(), delta1)
+		diffs2, _ = d.DiffFromDelta(basefile.ToString(), delta2)
+	}
 
 	for index1, index2 := 0, 0; index1 < len(diffs1) || index2 < len(diffs2); {
 		diff1 := diffs1[index1]
@@ -113,7 +118,7 @@ func HandleMergeConflicts(basefile tt.File, delta1 string, delta2 string) string
 			index1++
 			continue
 		}
-		newDiffs = append(newDiffs, diff1) //TODO THIS IS ARBITRARY FOR NOW
+		newDiffs = append(newDiffs, diff1)
 		newDiffs = append(newDiffs, diff2)
 		index1++
 		index2++
